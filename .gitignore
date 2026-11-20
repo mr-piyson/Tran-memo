@@ -9,3 +9,6 @@ src-tauri/gen
 # Local env
 .env
 .env.local
+
+# Local release artifacts
+.releases/

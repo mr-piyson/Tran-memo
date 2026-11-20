@@ -39,6 +39,16 @@ pnpm tauri dev
 
 `pnpm dev` runs the frontend in a browser with a `localStorage` fallback, which is handy for quick UI work. Data in that mode is separate from the desktop app's SQLite database.
 
+## Release artifacts
+
+Finished installers are collected in `.releases/` at the repository root. That
+folder is git-ignored, so local builds never pollute version control:
+
+- `Ledger Notes_0.1.0_aarch64.dmg` — macOS (Apple Silicon)
+- `Ledger Notes_0.1.0_x64-setup.exe` — Windows NSIS installer (x64)
+- `Ledger-Notes_0.1.0_arm64.apk` — Android (arm64-v8a, debug-signed)
+- `Ledger-Notes_0.1.0_unsigned.ipa` — iOS device (arm64, unsigned)
+
 ## Build
 
 ```bash
@@ -46,6 +56,20 @@ pnpm tauri build
 ```
 
 macOS outputs land in `src-tauri/target/release/bundle/` (`Ledger Notes.app` and a `.dmg`).
+
+On macOS, a Windows NSIS installer can be cross-compiled with mingw-w64 and a
+native `makensis`:
+
+```bash
+brew install mingw-w64 makensis
+rustup target add x86_64-pc-windows-gnu
+pnpm tauri build --target x86_64-pc-windows-gnu -b nsis --ci
+```
+
+`.cargo/config.toml` points the Windows GNU target at the Homebrew mingw linker.
+Tauri calls `makensis.exe`; a small `makensis.exe` shim that execs Homebrew's
+`makensis` on `PATH` is needed because the bundler assumes a Windows host. The
+installer is written to `src-tauri/target/x86_64-pc-windows-gnu/release/bundle/nsis/`.
 
 `src-tauri/Cargo.toml` keeps `strip = false` for host build artifacts via
 `[profile.release.build-override]`. Without it, `sqlx-macros` produces a corrupt
@@ -74,6 +98,16 @@ If `sdkmanager` only offers a dotted platform revision (e.g. `platforms;android-
 install it and create an `android-37` symlink in `$ANDROID_HOME/platforms` so the
 generated Gradle project can find it. APKs are written to
 `src-tauri/gen/android/app/build/outputs/apk/`.
+
+iOS requires full Xcode, CocoaPods, and an Apple signing certificate for a
+standard `pnpm tauri ios build`. On this machine the iOS simulator runtime and
+signing certificate are unavailable, so the IPA in `.releases` was produced by
+building the Rust static library for `aarch64-apple-ios` and linking the `main.mm`
+entry point directly against the iPhoneOS SDK, then packaging the `.app` as a
+zip. It is unsigned and can only be installed with a sideloading tool. A
+production iOS build needs `APPLE_DEVELOPMENT_TEAM` (or a configured signing
+certificate) and the iOS platform installed via
+`xcodebuild -downloadPlatform iOS`.
 
 For development:
 
