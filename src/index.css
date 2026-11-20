@@ -321,3 +321,34 @@ body,
   text-align: center;
 }
 .ledger-empty svg { width: 90px; height: 90px; }
+
+/* ---------- ag-grid single-row lists ---------- */
+
+.ledger-grid .ag-root-wrapper {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.ledger-grid .ag-header {
+  display: none;
+}
+.ledger-grid .ag-row {
+  border: 0;
+}
+.ledger-grid .ag-cell {
+  padding: 0;
+  border: 0;
+  overflow: visible;
+  /* ag-grid sets a large row line-height; custom row content needs normal. */
+  line-height: normal;
+}
+.ledger-grid .ag-row-hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.ledger-grid-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+

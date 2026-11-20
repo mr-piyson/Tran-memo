@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from "react";
+import { useMemo, useState, type CSSProperties, type FormEvent } from "react";
 import {
   ArchiveXIcon,
   ArrowLeftIcon,
@@ -9,6 +9,7 @@ import {
   XIcon,
 } from "lucide-react";
 import Logo from "@/assets/Logo";
+import ListGrid from "@/components/ListGrid";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,10 @@ interface Summary {
   count: number;
   last?: Entry;
 }
+
+type ThreadRow =
+  | { kind: "divider"; id: string; label: string }
+  | { kind: "entry"; id: string; entry: Entry };
 
 function summarize(entries: Entry[]): Map<number, Summary> {
   const result = new Map<number, Summary>();
@@ -161,53 +166,59 @@ export function DealersPanel({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-24">
-        {filtered.length === 0 ? (
+      {filtered.length === 0 ? (
+        <div className="flex min-h-0 flex-1 flex-col">
           <EmptyLedger text={search ? "No matches" : "There are no dealers"} />
-        ) : (
-          filtered.map((dealer) => {
-            const summary = summaries.get(dealer.id);
-            return (
-              <Button
-                key={dealer.id}
-                variant="ghost"
-                className="ledger-row"
-                data-selected={selectedId === dealer.id}
-                aria-label={`Open ${dealer.name}`}
-                onClick={() => onSelect(dealer.id)}
-              >
-                <LedgerAvatar dealer={dealer} />
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-baseline justify-between gap-2">
-                    <span className="ledger-row-name truncate">{dealer.name}</span>
-                    {summary?.last && (
-                      <span className="ledger-row-meta shrink-0">
-                        {formatListDate(summary.last.created_at)}
-                      </span>
-                    )}
-                  </span>
-                  <span className="mt-1 flex items-center justify-between gap-2">
-                    <span className="ledger-row-meta truncate">
-                      {dealer.phone || "—"}
-                      {summary ? ` · ${summary.count} tx` : " · no transactions"}
+        </div>
+      ) : (
+        <div className="flex min-h-0 flex-1 px-2 pb-24">
+          <ListGrid
+            rows={filtered}
+            getRowId={(dealer) => String(dealer.id)}
+            rowHeight={72}
+            renderRow={(dealer) => {
+              const summary = summaries.get(dealer.id);
+              return (
+                <Button
+                  variant="ghost"
+                  className="ledger-row"
+                  data-selected={selectedId === dealer.id}
+                  aria-label={`Open ${dealer.name}`}
+                  onClick={() => onSelect(dealer.id)}
+                >
+                  <LedgerAvatar dealer={dealer} />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className="ledger-row-name truncate">{dealer.name}</span>
+                      {summary?.last && (
+                        <span className="ledger-row-meta shrink-0">
+                          {formatListDate(summary.last.created_at)}
+                        </span>
+                      )}
                     </span>
-                    {summary && summary.count > 0 && (
-                      <span
-                        className={cn(
-                          "ledger-row-total shrink-0 tabular-nums",
-                          summary.total >= 0 ? "text-success" : "text-danger",
-                        )}
-                      >
-                        {formatSigned(summary.total, currency)}
+                    <span className="mt-1 flex items-center justify-between gap-2">
+                      <span className="ledger-row-meta truncate">
+                        {dealer.phone || "—"}
+                        {summary ? ` · ${summary.count} tx` : " · no transactions"}
                       </span>
-                    )}
+                      {summary && summary.count > 0 && (
+                        <span
+                          className={cn(
+                            "ledger-row-total shrink-0 tabular-nums",
+                            summary.total >= 0 ? "text-success" : "text-danger",
+                          )}
+                        >
+                          {formatSigned(summary.total, currency)}
+                        </span>
+                      )}
+                    </span>
                   </span>
-                </span>
-              </Button>
-            );
-          })
-        )}
-      </div>
+                </Button>
+              );
+            }}
+          />
+        </div>
+      )}
 
       <Button className="ledger-fab" aria-label="New dealer" onClick={onNewDealer}>
         <span className="text-2xl leading-none">+</span>
@@ -285,60 +296,66 @@ export function LedgerNotesPanel({
         )}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-24">
-        {!dealer || notes.length === 0 ? (
+      {!dealer || notes.length === 0 ? (
+        <div className="flex min-h-0 flex-1 flex-col">
           <EmptyLedger text="No ledger notes yet" />
-        ) : (
-          notes.map((note) => {
-            const summary = summaries.get(note.id);
-            const noteTotal = summary?.total ?? 0;
-            const tone = noteTotal >= 0 ? "var(--bar-green)" : "var(--bar-red)";
-            return (
-              <div
-                key={note.id}
-                className="ledger-code-card"
-                data-selected={selectedId === note.id}
-                style={{ "--tone": tone } as CSSProperties}
-              >
-                <Button
-                  variant="ghost"
-                  className="h-auto w-full justify-start rounded-none p-3 text-left"
-                  aria-label={`Open ${note.code}`}
-                  onClick={() => onSelect(note.id)}
+        </div>
+      ) : (
+        <div className="flex min-h-0 flex-1 px-2 pb-24">
+          <ListGrid
+            rows={notes}
+            getRowId={(note) => String(note.id)}
+            rowHeight={78}
+            renderRow={(note) => {
+              const summary = summaries.get(note.id);
+              const noteTotal = summary?.total ?? 0;
+              const tone = noteTotal >= 0 ? "var(--bar-green)" : "var(--bar-red)";
+              return (
+                <div
+                  className="ledger-code-card"
+                  data-selected={selectedId === note.id}
+                  style={{ "--tone": tone } as CSSProperties}
                 >
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-baseline justify-between gap-2">
-                      <span className="ledger-code">{note.code}</span>
-                      {summary?.last && (
-                        <span className="ledger-row-meta shrink-0">
-                          {formatListDate(summary.last.created_at)}
-                        </span>
-                      )}
-                    </span>
-                    <span className="mt-1 flex items-center justify-between gap-2">
-                      <span className="ledger-row-meta truncate">
-                        {note.label || "Ledger note"}
-                        {` · ${summary?.count ?? 0} tx`}
+                  <Button
+                    variant="ghost"
+                    className="h-auto w-full justify-start rounded-none p-3 text-left"
+                    aria-label={`Open ${note.code}`}
+                    onClick={() => onSelect(note.id)}
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-baseline justify-between gap-2">
+                        <span className="ledger-code">{note.code}</span>
+                        {summary?.last && (
+                          <span className="ledger-row-meta shrink-0">
+                            {formatListDate(summary.last.created_at)}
+                          </span>
+                        )}
                       </span>
-                      {summary && summary.count > 0 && (
-                        <span
-                          className={cn(
-                            "ledger-row-total shrink-0 tabular-nums",
-                            noteTotal >= 0 ? "text-success" : "text-danger",
-                          )}
-                        >
-                          {formatSigned(noteTotal, currency)}
+                      <span className="mt-1 flex items-center justify-between gap-2">
+                        <span className="ledger-row-meta truncate">
+                          {note.label || "Ledger note"}
+                          {` · ${summary?.count ?? 0} tx`}
                         </span>
-                      )}
+                        {summary && summary.count > 0 && (
+                          <span
+                            className={cn(
+                              "ledger-row-total shrink-0 tabular-nums",
+                              noteTotal >= 0 ? "text-success" : "text-danger",
+                            )}
+                          >
+                            {formatSigned(noteTotal, currency)}
+                          </span>
+                        )}
+                      </span>
                     </span>
-                  </span>
-                </Button>
-                <div className="ledger-code-card-bar" />
-              </div>
-            );
-          })
-        )}
-      </div>
+                  </Button>
+                  <div className="ledger-code-card-bar" />
+                </div>
+              );
+            }}
+          />
+        </div>
+      )}
 
       {dealer && (
         <Button className="ledger-fab" aria-label="New ledger note" onClick={onNewNote}>
@@ -381,7 +398,6 @@ export function LedgerThread({
   const [noteText, setNoteText] = useState("");
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
-  const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const totals = useMemo(() => {
     let income = 0;
@@ -407,10 +423,28 @@ export function LedgerThread({
     return result;
   }, [entries]);
 
-  useEffect(() => {
-    const element = scrollRef.current;
-    if (element) element.scrollTop = element.scrollHeight;
-  }, [entries.length, note?.id]);
+  // ag-grid needs one row per item: date dividers become compact rows and
+  // every transaction gets exactly one bubble row.
+  const rows = useMemo<ThreadRow[]>(
+    () =>
+      groups.flatMap((group, index) => {
+        const [y, m, d] = group.date.split("-");
+        const weekday = new Date(`${group.date}T00:00`).toLocaleDateString("en", {
+          weekday: "short",
+        });
+        return [
+          {
+            kind: "divider" as const,
+            id: `divider-${group.date}-${index}`,
+            label: `${d}/${m}/${y} ${weekday}`,
+          },
+          ...group.entries.map(
+            (entry): ThreadRow => ({ kind: "entry", id: `entry-${entry.id}`, entry }),
+          ),
+        ];
+      }),
+    [groups],
+  );
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -486,68 +520,74 @@ export function LedgerThread({
         </span>
       </div>
 
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-2">
-        {!loading && entries.length === 0 ? (
+      {!loading && entries.length === 0 ? (
+        <div className="flex min-h-0 flex-1 flex-col">
           <div className="ledger-empty">
             <ReceiptTextIcon strokeWidth={1} />
             <span className="text-lg">No transactions yet</span>
           </div>
-        ) : (
-          groups.map((group) => {
-            const [y, m, d] = group.date.split("-");
-            const weekday = new Date(`${group.date}T00:00`).toLocaleDateString("en", {
-              weekday: "short",
-            });
-            return (
-              <div key={group.date}>
-                <div className="ledger-divider">
-                  <span>{`${d}/${m}/${y} ${weekday}`}</span>
-                </div>
-                {group.entries.map((entry) => {
-                  const isIncome = entry.kind === "income";
-                  const entryTone = isIncome ? "var(--bar-green)" : "var(--bar-red)";
-                  const entryColor = isIncome ? "var(--success)" : "var(--danger)";
-                  return (
-                    <div
-                      key={entry.id}
-                      className={cn(
-                        "group flex w-full items-center gap-2 py-1",
-                        isIncome ? "justify-start" : "justify-end",
-                      )}
-                    >
-                      <div
-                        className="ledger-bubble"
-                        data-kind={entry.kind}
-                        style={{ "--tone": entryTone } as CSSProperties}
+        </div>
+      ) : (
+        <div className="flex min-h-0 flex-1 px-3 py-2">
+          <ListGrid
+            rows={rows}
+            getRowId={(row) => row.id}
+            rowHeight={(row) => (row.kind === "divider" ? 28 : 76)}
+            autoScrollToBottom
+            scrollKey={note?.id ?? "none"}
+            renderRow={(row) => {
+              if (row.kind === "divider") {
+                return (
+                  <div className="ledger-divider">
+                    <span>{row.label}</span>
+                  </div>
+                );
+              }
+              const entry = row.entry;
+              const isIncome = entry.kind === "income";
+              const entryTone = isIncome ? "var(--bar-green)" : "var(--bar-red)";
+              const entryColor = isIncome ? "var(--success)" : "var(--danger)";
+              return (
+                <div
+                  className={cn(
+                    "group flex w-full items-center gap-2 py-1",
+                    isIncome ? "justify-start" : "justify-end",
+                  )}
+                >
+                  <div
+                    className="ledger-bubble"
+                    data-kind={entry.kind}
+                    style={{ "--tone": entryTone } as CSSProperties}
+                  >
+                    <div className="flex items-baseline justify-between gap-6">
+                      <span
+                        className="ledger-bubble-amount tabular-nums"
+                        style={{ color: entryColor }}
                       >
-                        <div className="flex items-baseline justify-between gap-6">
-                          <span className="ledger-bubble-amount tabular-nums" style={{ color: entryColor }}>
-                            {isIncome ? "+" : "−"}
-                            {formatAmount(entry.amount_cents, currency)}
-                          </span>
-                          <span className="ledger-bubble-time">{formatTime(entry.created_at)}</span>
-                        </div>
-                        <div className="ledger-bubble-bar" />
-                        <div className="ledger-bubble-note break-words">{entry.description}</div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        className="opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100"
-                        aria-label="Delete transaction"
-                        title="Delete transaction"
-                        onClick={() => onRemoveEntry(entry.id)}
-                      >
-                        <Trash2Icon />
-                      </Button>
+                        {isIncome ? "+" : "−"}
+                        {formatAmount(entry.amount_cents, currency)}
+                      </span>
+                      <span className="ledger-bubble-time">{formatTime(entry.created_at)}</span>
                     </div>
-                  );
-                })}
-              </div>
-            );
-          })
-        )}
-      </div>
+                    <div className="ledger-bubble-bar" />
+                    <div className="ledger-bubble-note break-words">{entry.description}</div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100"
+                    aria-label="Delete transaction"
+                    title="Delete transaction"
+                    onClick={() => onRemoveEntry(entry.id)}
+                  >
+                    <Trash2Icon />
+                  </Button>
+                </div>
+              );
+            }}
+          />
+        </div>
+      )}
 
       {note && (
         <form onSubmit={submit} className="shrink-0">
