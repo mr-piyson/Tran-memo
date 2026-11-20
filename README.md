@@ -1,6 +1,6 @@
 # Ledger Notes
 
-A cross-platform money-tracker note app built with Tauri 2, Solid 2, Vite, Tailwind CSS 4 and TypeScript. It uses a WhatsApp-inspired layout: a tools rail, a virtualized notes/chats panel, and a virtualized chat-style transaction timeline.
+A cross-platform money-tracker note app built with Tauri 2, React 19, Vite 8, Tailwind CSS 4, shadcn/ui (Base UI primitives) and TypeScript. It uses a WhatsApp-inspired layout: a tools rail, a virtualized notes/chats panel, and a virtualized chat-style transaction timeline.
 
 Each note is a conversation thread with its own income/expense entries (type, amount, description), stored in a local SQLite database.
 
@@ -9,11 +9,12 @@ Each note is a conversation thread with its own income/expense entries (type, am
 | Layer | Technology |
 | --- | --- |
 | Desktop / mobile shell | Tauri 2 (Rust) |
-| UI | Solid 2 + Vite 8 |
+| UI | React 19 + Vite 8 |
+| Components | shadcn/ui with Base UI primitives (`base-nova` style) |
 | Styling | Tailwind CSS 4 (`@tailwindcss/vite`) |
 | Language | TypeScript 7 |
 | Storage | `@tauri-apps/plugin-sql` with SQLite, migrations in `src-tauri/src/lib.rs` |
-| Lists | `@tanstack/virtual-core` via a small Solid 2 adapter in `src/lib/virtual.ts` |
+| Lists | `@tanstack/react-virtual` |
 
 ## Features
 
@@ -72,6 +73,7 @@ Change the currency from the Settings modal (bottom rail on desktop / bottom bar
 - `src/components/Rail.tsx` — tools/options rail
 - `src/components/NotesPanel.tsx` — virtualized notes/contact-style list
 - `src/components/ChatPanel.tsx` — virtualized chat-style transaction list and composer
-- `src/components/Icons.tsx`, `src/components/Modal.tsx` — small shared UI pieces
+- `src/components/EmojiPicker.tsx` — emoji avatar picker in a shadcn Popover
+- `src/components/ui/` — generated shadcn/Base UI components
 - `src/lib/entries.ts` — SQLite/browser data store and formatting helpers
-- `src/lib/virtual.ts` — Solid 2 adapter for `@tanstack/virtual-core`
+- `src/lib/utils.ts` — shadcn `cn` helper

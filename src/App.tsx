@@ -1,9 +1,43 @@
-import { createMemo, createSignal, For, onSettled, Show, type Accessor } from "solid-js";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import ChatPanel from "./components/ChatPanel";
 import EmojiPicker from "./components/EmojiPicker";
-import Modal from "./components/Modal";
 import NotesPanel from "./components/NotesPanel";
 import Rail from "./components/Rail";
+import {
+  Alert,
+  AlertDescription,
+} from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   CURRENCIES,
   getCurrency,
@@ -15,39 +49,38 @@ import {
   type EntryKind,
   type Note,
 } from "./lib/entries";
-import "./index.css";
 
 const DEFAULT_EMOJI = "💬";
+const currencyItems = CURRENCIES.map((code) => ({ label: code, value: code }));
 
 export default function App() {
-  const [notes, setNotes] = createSignal<Note[]>([]);
-  const [entries, setEntries] = createSignal<Entry[]>([]);
-  const [selectedId, setSelectedId] = createSignal<number | null>(null);
-  const [currency, setCurrencySignal] = createSignal<Currency>(getCurrency());
-  const [loading, setLoading] = createSignal(true);
-  const [error, setError] = createSignal("");
-  const [mobileView, setMobileView] = createSignal<"list" | "chat">("list");
-  const [showSettings, setShowSettings] = createSignal(false);
-  const [showNewNote, setShowNewNote] = createSignal(false);
-  const [newTitle, setNewTitle] = createSignal("");
-  const [newEmoji, setNewEmoji] = createSignal(DEFAULT_EMOJI);
-  const [savingNote, setSavingNote] = createSignal(false);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [currency, setCurrencyState] = useState<Currency>(getCurrency);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [mobileView, setMobileView] = useState<"list" | "chat">("list");
+  const [showSettings, setShowSettings] = useState(false);
+  const [showNewNote, setShowNewNote] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newEmoji, setNewEmoji] = useState(DEFAULT_EMOJI);
+  const [savingNote, setSavingNote] = useState(false);
 
-  const selectedNote = createMemo(
-    () => notes().find((note) => note.id === selectedId()) ?? null,
+  const selectedNote = useMemo(
+    () => notes.find((note) => note.id === selectedId) ?? null,
+    [notes, selectedId],
   );
 
-  const selectedEntries = createMemo(() => {
-    const id = selectedId();
-    return id === null ? [] : entries().filter((entry) => entry.note_id === id);
-  });
+  const selectedEntries = useMemo(
+    () => (selectedId === null ? [] : entries.filter((entry) => entry.note_id === selectedId)),
+    [entries, selectedId],
+  );
 
-  async function reload() {
+  const reload = useCallback(async () => {
     const store = await getStore();
     const allNotes = await store.listNotes();
-    const lists = await Promise.all(
-      allNotes.map((note) => store.listEntries(note.id)),
-    );
+    const lists = await Promise.all(allNotes.map((note) => store.listEntries(note.id)));
     setNotes(allNotes);
     setEntries(lists.flat());
     setSelectedId((current) =>
@@ -55,25 +88,30 @@ export default function App() {
         ? current
         : (allNotes[0]?.id ?? null),
     );
-  }
+  }, []);
 
-  onSettled(() => {
+  useEffect(() => {
     reload()
-      .catch((err) => setError(err instanceof Error ? err.message : String(err)))
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)))
       .finally(() => setLoading(false));
-  });
+  }, [reload]);
+
+  // shadcn ships class-based dark mode; keep it in sync with the OS setting.
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => document.documentElement.classList.toggle("dark", media.matches);
+    apply();
+    media.addEventListener("change", apply);
+    return () => media.removeEventListener("change", apply);
+  }, []);
 
   function selectNote(id: number) {
     setSelectedId(id);
     setMobileView("chat");
   }
 
-  async function addEntry(
-    kind: EntryKind,
-    amountCents: number,
-    description: string,
-  ) {
-    const noteId = selectedId();
+  async function addEntry(kind: EntryKind, amountCents: number, description: string) {
+    const noteId = selectedId;
     if (noteId === null) return;
     const store = await getStore();
     await store.addEntry({ noteId, kind, amountCents, description });
@@ -87,11 +125,10 @@ export default function App() {
   }
 
   async function deleteNote() {
-    const note = selectedNote();
-    if (!note || !confirm(`Delete "${note.title}" and all its transactions?`)) return;
+    if (!selectedNote || !window.confirm(`Delete "${selectedNote.title}" and all its transactions?`)) return;
     try {
       const store = await getStore();
-      await store.deleteNote(note.id);
+      await store.deleteNote(selectedNote.id);
       setMobileView("list");
       await reload();
     } catch (err) {
@@ -99,15 +136,15 @@ export default function App() {
     }
   }
 
-  async function createNote(event: SubmitEvent) {
+  async function createNote(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const title = newTitle().trim();
-    if (!title || savingNote()) return;
+    const title = newTitle.trim();
+    if (!title || savingNote) return;
     setSavingNote(true);
     setError("");
     try {
       const store = await getStore();
-      const note = await store.createNote({ title, emoji: newEmoji() });
+      const note = await store.createNote({ title, emoji: newEmoji });
       await reload();
       setSelectedId(note.id);
       setMobileView("chat");
@@ -122,138 +159,153 @@ export default function App() {
   }
 
   function changeCurrency(next: Currency) {
-    setCurrencySignal(next);
+    setCurrencyState(next);
     setCurrency(next);
   }
 
   function clearBrowserData() {
-    if (!confirm("Clear all browser-preview notes and transactions?")) return;
+    if (!window.confirm("Clear all browser-preview notes and transactions?")) return;
     localStorage.removeItem("ledger-notes:v2");
     localStorage.removeItem("ledger-notes:entries");
     setSelectedId(null);
     setMobileView("list");
-    reload().catch((err) => setError(err instanceof Error ? err.message : String(err)));
+    reload().catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
   }
 
   return (
-    <div class="flex h-dvh flex-col overflow-hidden bg-slate-100 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div class="flex min-h-0 flex-1 flex-col md:flex-row">
-        <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-          <NotesPanel
-            notes={notes as Accessor<Note[]>}
-            entries={entries as Accessor<Entry[]>}
-            selectedId={selectedId as Accessor<number | null>}
-            currency={currency as Accessor<Currency>}
-            hiddenOnMobile={mobileView() === "chat"}
-            onSelect={selectNote}
+    <TooltipProvider>
+      <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
+        <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+          <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+            <NotesPanel
+              notes={notes}
+              entries={entries}
+              selectedId={selectedId}
+              currency={currency}
+              hiddenOnMobile={mobileView === "chat"}
+              onSelect={selectNote}
+              onNewNote={() => setShowNewNote(true)}
+            />
+            <ChatPanel
+              note={selectedNote}
+              entries={selectedEntries}
+              currency={currency}
+              loading={loading}
+              hiddenOnMobile={mobileView === "list"}
+              onBack={() => setMobileView("list")}
+              onDeleteNote={deleteNote}
+              onAddEntry={addEntry}
+              onRemoveEntry={removeEntry}
+            />
+          </div>
+
+          <Rail
             onNewNote={() => setShowNewNote(true)}
-          />
-          <ChatPanel
-            note={selectedNote}
-            entries={selectedEntries}
-            currency={currency}
-            loading={loading()}
-            hiddenOnMobile={mobileView() === "list"}
-            onBack={() => setMobileView("list")}
-            onDeleteNote={deleteNote}
-            onAddEntry={addEntry}
-            onRemoveEntry={removeEntry}
+            onSettings={() => setShowSettings(true)}
           />
         </div>
 
-        <Rail
-          onNewNote={() => setShowNewNote(true)}
-          onSettings={() => setShowSettings(true)}
-        />
-      </div>
-
-      <Show when={error()}>
-        {(message) => (
-          <div
-            role="alert"
-            class="fixed bottom-20 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-medium text-white shadow-lg md:bottom-6"
+        {error && (
+          <Alert
+            variant="destructive"
+            className="fixed bottom-20 left-1/2 z-50 w-auto -translate-x-1/2 shadow-lg md:bottom-6"
           >
-            {message()}
-          </div>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
-      </Show>
 
-      <Show when={showSettings()}>
-        <Modal title="Settings" onClose={() => setShowSettings(false)}>
-          <div class="space-y-5">
-            <label class="block">
-              <span class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Currency
-              </span>
-              <select
-                value={currency()}
-                onChange={(event) => changeCurrency(event.currentTarget.value as Currency)}
-                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-800"
-              >
-                <For each={CURRENCIES}>
-                  {(option) => <option value={option}>{option}</option>}
-                </For>
-              </select>
-            </label>
-
-            <div class="rounded-xl bg-slate-50 p-4 text-sm dark:bg-slate-800">
-              <p class="font-medium">Storage</p>
-              <p class="mt-1 text-slate-500 dark:text-slate-400">
-                {isTauri()
-                  ? "Transactions are saved in a local SQLite database."
-                  : "Browser preview mode uses localStorage."}
-              </p>
-            </div>
-
-            <Show when={!isTauri()}>
-              <button
-                type="button"
-                onClick={clearBrowserData}
-                class="w-full rounded-xl border border-rose-200 px-4 py-2.5 text-sm font-semibold text-rose-600 transition hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10"
-              >
+        <Dialog open={showSettings} onOpenChange={setShowSettings}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Settings</DialogTitle>
+              <DialogDescription>
+                Choose how amounts are displayed and where your data lives.
+              </DialogDescription>
+            </DialogHeader>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="currency">Currency</FieldLabel>
+                <Select
+                  items={currencyItems}
+                  value={currency}
+                  onValueChange={(value) => changeCurrency(value as Currency)}
+                >
+                  <SelectTrigger id="currency" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent align="start">
+                    <SelectGroup>
+                      {CURRENCIES.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          {option}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </Field>
+            </FieldGroup>
+            <Card size="sm">
+              <CardHeader>
+                <CardTitle>Storage</CardTitle>
+                <CardDescription>
+                  {isTauri()
+                    ? "Transactions are saved in a local SQLite database."
+                    : "Browser preview mode uses localStorage."}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+            {!isTauri() && (
+              <Button variant="destructive" onClick={clearBrowserData}>
                 Clear browser preview data
-              </button>
-            </Show>
-          </div>
-        </Modal>
-      </Show>
+              </Button>
+            )}
+            <DialogFooter>
+              <DialogClose render={<Button variant="outline" />}>Done</DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-      <Show when={showNewNote()}>
-        <Modal title="New note" onClose={() => setShowNewNote(false)}>
-          <form onSubmit={createNote} class="space-y-5">
-            <label class="block">
-              <span class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Note title
-              </span>
-              <input
-                type="text"
-                required
-                maxlength="60"
-                autofocus
-                placeholder="e.g. Groceries"
-                value={newTitle()}
-                onInput={(event) => setNewTitle(event.currentTarget.value)}
-                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-800"
-              />
-            </label>
-            <div>
-              <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Avatar
-              </p>
-              <div class="mt-2">
-                <EmojiPicker value={newEmoji()} onChange={setNewEmoji} />
-              </div>
-            </div>
-            <button
-              type="submit"
-              disabled={savingNote()}
-              class="w-full rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600 disabled:opacity-50"
-            >
-              Create note
-            </button>
-          </form>
-        </Modal>
-      </Show>
-    </div>
+        <Dialog open={showNewNote} onOpenChange={setShowNewNote}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>New note</DialogTitle>
+              <DialogDescription>
+                Start a conversation to track its income and expenses.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={createNote} className="flex flex-col gap-4">
+              <FieldGroup>
+                <Field>
+                  <FieldLabel htmlFor="note-title">Note title</FieldLabel>
+                  <Input
+                    id="note-title"
+                    type="text"
+                    required
+                    maxLength={60}
+                    autoFocus
+                    placeholder="e.g. Groceries"
+                    value={newTitle}
+                    onChange={(event) => setNewTitle(event.target.value)}
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel>Avatar</FieldLabel>
+                  <EmojiPicker value={newEmoji} onChange={setNewEmoji} />
+                </Field>
+              </FieldGroup>
+              <DialogFooter>
+                <DialogClose render={<Button variant="outline" type="button" />}>
+                  Cancel
+                </DialogClose>
+                <Button type="submit" disabled={savingNote}>
+                  Create note
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </TooltipProvider>
   );
 }

@@ -1,4 +1,21 @@
-import { createMemo, createSignal, For, Show, type Accessor } from "solid-js";
+import { useMemo, useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { MessageCircleIcon, PlusIcon, SearchIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
+import { cn } from "@/lib/utils";
 import {
   formatAmount,
   formatListDate,
@@ -6,8 +23,6 @@ import {
   type Entry,
   type Note,
 } from "../lib/entries";
-import { createVirtualizer } from "../lib/virtual";
-import { PlusIcon, SearchIcon } from "./Icons";
 
 interface NoteSummary {
   total: number;
@@ -16,31 +31,37 @@ interface NoteSummary {
 }
 
 interface NotesPanelProps {
-  notes: Accessor<Note[]>;
-  entries: Accessor<Entry[]>;
-  selectedId: Accessor<number | null>;
-  currency: Accessor<Currency>;
+  notes: Note[];
+  entries: Entry[];
+  selectedId: number | null;
+  currency: Currency;
   hiddenOnMobile: boolean;
   onSelect: (id: number) => void;
   onNewNote: () => void;
 }
 
-export default function NotesPanel(props: NotesPanelProps) {
-  const [search, setSearch] = createSignal("");
+export default function NotesPanel({
+  notes,
+  entries,
+  selectedId,
+  currency,
+  hiddenOnMobile,
+  onSelect,
+  onNewNote,
+}: NotesPanelProps) {
+  const [search, setSearch] = useState("");
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  const filteredNotes = createMemo(() => {
-    const query = search().trim().toLowerCase();
-    return query
-      ? props.notes().filter((note) => note.title.toLowerCase().includes(query))
-      : props.notes();
-  });
+  const filteredNotes = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return query ? notes.filter((note) => note.title.toLowerCase().includes(query)) : notes;
+  }, [notes, search]);
 
-  const summaries = createMemo(() => {
+  const summaries = useMemo(() => {
     const result = new Map<number, NoteSummary>();
-    for (const entry of props.entries()) {
+    for (const entry of entries) {
       const summary = result.get(entry.note_id) ?? { total: 0, count: 0 };
-      summary.total +=
-        entry.kind === "income" ? entry.amount_cents : -entry.amount_cents;
+      summary.total += entry.kind === "income" ? entry.amount_cents : -entry.amount_cents;
       summary.count += 1;
       if (!summary.last || entry.created_at > summary.last.created_at) {
         summary.last = entry;
@@ -48,146 +69,138 @@ export default function NotesPanel(props: NotesPanelProps) {
       result.set(entry.note_id, summary);
     }
     return result;
-  });
+  }, [entries]);
 
-  const virtual = createVirtualizer<HTMLDivElement>(() => ({
-    count: filteredNotes().length,
+  const virtualizer = useVirtualizer({
+    count: filteredNotes.length,
+    getScrollElement: () => scrollRef.current,
     estimateSize: () => 78,
     overscan: 8,
-    getItemKey: (index) => filteredNotes()[index]?.id ?? index,
-  }));
+    getItemKey: (index) => filteredNotes[index]?.id ?? index,
+  });
 
   return (
     <aside
-      class={[
-        "flex min-h-0 w-full shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 md:w-80 lg:w-96",
-        props.hiddenOnMobile && "max-md:hidden",
-      ]}
+      className={cn(
+        "flex min-h-0 w-full shrink-0 flex-col border-r bg-background md:w-80 lg:w-96",
+        hiddenOnMobile && "max-md:hidden",
+      )}
     >
-      <div class="shrink-0 space-y-3 px-4 pb-3 pt-5">
-        <div class="flex items-center justify-between gap-3">
+      <div className="flex shrink-0 flex-col gap-3 px-4 pb-3 pt-5">
+        <div className="flex items-center justify-between gap-3">
           <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
               Ledger Notes
             </p>
-            <h1 class="mt-0.5 text-xl font-bold">Chats</h1>
+            <h1 className="mt-0.5 text-xl font-bold">Chats</h1>
           </div>
-          <button
-            type="button"
-            title="New note"
-            aria-label="New note"
-            onClick={props.onNewNote}
-            class="rounded-xl bg-emerald-500 p-2.5 text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-600"
-          >
-            <PlusIcon class="size-5" />
-          </button>
+          <Button size="icon" aria-label="New note" onClick={onNewNote}>
+            <PlusIcon />
+          </Button>
         </div>
 
-        <label class="flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2.5 dark:bg-slate-800">
-          <SearchIcon class="size-4 shrink-0 text-slate-400" />
-          <input
+        <InputGroup>
+          <InputGroupInput
             type="search"
+            aria-label="Search notes"
             placeholder="Search notes"
-            value={search()}
-            onInput={(event) => setSearch(event.currentTarget.value)}
-            class="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
           />
-        </label>
+          <InputGroupAddon>
+            <SearchIcon />
+          </InputGroupAddon>
+        </InputGroup>
       </div>
 
-      <Show
-        when={filteredNotes().length > 0}
-        fallback={
-          <div class="flex flex-1 flex-col items-center justify-center gap-3 px-8 text-center">
-            <p class="text-sm text-slate-500 dark:text-slate-400">
-              {search() ? "No notes match your search." : "No notes yet."}
-            </p>
-            <Show when={!search()}>
-              <button
-                type="button"
-                onClick={props.onNewNote}
-                class="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-600"
-              >
+      {filteredNotes.length === 0 ? (
+        <Empty className="border-0">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <MessageCircleIcon />
+            </EmptyMedia>
+            <EmptyTitle>{search ? "No matches" : "No notes yet"}</EmptyTitle>
+            <EmptyDescription>
+              {search
+                ? "No notes match your search."
+                : "Create a note to start tracking transactions."}
+            </EmptyDescription>
+          </EmptyHeader>
+          {!search && (
+            <EmptyContent>
+              <Button onClick={onNewNote}>
+                <PlusIcon data-icon="inline-start" />
                 Create your first note
-              </button>
-            </Show>
-          </div>
-        }
-      >
+              </Button>
+            </EmptyContent>
+          )}
+        </Empty>
+      ) : (
         <div
-          ref={virtual.setScrollElement}
-          class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3"
+          ref={scrollRef}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3"
         >
-          <div class="relative w-full" style={{ height: `${virtual.totalSize()}px` }}>
-            <For each={virtual.virtualItems()}>
-              {(row) => {
-                const note = () => filteredNotes()[row.index];
-                const summary = () => summaries().get(note().id);
-                const isSelected = () => props.selectedId() === note().id;
+          <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+            {virtualizer.getVirtualItems().map((row) => {
+              const note = filteredNotes[row.index];
+              const summary = summaries.get(note.id);
+              const last = summary?.last;
+              const isSelected = selectedId === note.id;
 
-                return (
-                  <div
-                    ref={(element) => virtual.measureElement(element)}
-                    data-index={row.index}
-                    class="absolute left-0 top-0 w-full px-1 pb-1"
-                    style={{ transform: `translateY(${row.start}px)` }}
+              return (
+                <div
+                  key={row.key}
+                  data-index={row.index}
+                  ref={(element) => {
+                    if (element) virtualizer.measureElement(element);
+                  }}
+                  className="absolute left-0 top-0 w-full px-1 pb-1"
+                  style={{ transform: `translateY(${row.start}px)` }}
+                >
+                  <Button
+                    variant="ghost"
+                    data-selected={isSelected}
+                    aria-label={`Open ${note.title}`}
+                    className="h-auto w-full justify-start rounded-2xl p-3 text-left data-[selected=true]:bg-accent"
+                    onClick={() => onSelect(note.id)}
                   >
-                    <button
-                      type="button"
-                      onClick={() => props.onSelect(note().id)}
-                      class={[
-                        "flex w-full items-center gap-3 rounded-2xl p-3 text-left transition",
-                        {
-                          "bg-emerald-50 dark:bg-emerald-500/10": isSelected(),
-                          "hover:bg-slate-50 dark:hover:bg-slate-800": !isSelected(),
-                        },
-                      ]}
-                    >
-                      <span class="flex size-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-100 to-teal-200 text-xl dark:from-emerald-500/20 dark:to-teal-500/20">
-                        {note().emoji}
-                      </span>
-                      <span class="min-w-0 flex-1">
-                        <span class="flex items-baseline justify-between gap-2">
-                          <span class="truncate font-semibold">{note().title}</span>
-                          <Show when={summary()?.last}>
-                            {(last) => (
-                              <span class="shrink-0 text-[11px] text-slate-400">
-                                {formatListDate(last().created_at)}
-                              </span>
-                            )}
-                          </Show>
-                        </span>
-                        <span class="mt-1 flex items-center justify-between gap-2">
-                          <span class="truncate text-xs text-slate-500 dark:text-slate-400">
-                            {summary()?.last
-                              ? `${summary()?.last?.kind === "income" ? "↙ " : "↗ "}${summary()?.last?.description}`
-                              : "No transactions yet"}
+                    <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-muted text-xl">
+                      {note.emoji}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-baseline justify-between gap-2">
+                        <span className="truncate font-semibold">{note.title}</span>
+                        {last && (
+                          <span className="shrink-0 text-[11px] text-muted-foreground">
+                            {formatListDate(last.created_at)}
                           </span>
-                          <Show when={(summary()?.count ?? 0) > 0}>
-                            <span
-                              class={[
-                                "shrink-0 text-xs font-semibold tabular-nums",
-                                {
-                                  "text-emerald-600 dark:text-emerald-400":
-                                    (summary()?.total ?? 0) >= 0,
-                                  "text-rose-500 dark:text-rose-400":
-                                    (summary()?.total ?? 0) < 0,
-                                },
-                              ]}
-                            >
-                              {formatAmount(summary()?.total ?? 0, props.currency())}
-                            </span>
-                          </Show>
-                        </span>
+                        )}
                       </span>
-                    </button>
-                  </div>
-                );
-              }}
-            </For>
+                      <span className="mt-1 flex items-center justify-between gap-2">
+                        <span className="truncate text-xs text-muted-foreground">
+                          {last
+                            ? `${last.kind === "income" ? "↙ " : "↗ "}${last.description}`
+                            : "No transactions yet"}
+                        </span>
+                        {(summary?.count ?? 0) > 0 && (
+                          <span
+                            className={cn(
+                              "shrink-0 text-xs font-semibold tabular-nums",
+                              (summary?.total ?? 0) >= 0 ? "text-positive" : "text-negative",
+                            )}
+                          >
+                            {formatAmount(summary?.total ?? 0, currency)}
+                          </span>
+                        )}
+                      </span>
+                    </span>
+                  </Button>
+                </div>
+              );
+            })}
           </div>
         </div>
-      </Show>
+      )}
     </aside>
   );
 }
