@@ -1,68 +1,52 @@
 import type { SVGProps } from "react";
 
-interface LogoProps extends Omit<SVGProps<SVGSVGElement>, "color"> {
+export interface LogoProps extends SVGProps<SVGSVGElement> {
+  /**
+   * Any CSS colour: hex, rgb(), hsl(), oklch(), `currentColor`
+   * or `var(--primary-color)`. Shades are derived by the browser with
+   * `color-mix()`, so CSS variables finally work.
+   */
   primaryColor?: string;
+  /** Accessible name. Pass "" to mark the logo as purely decorative. */
+  title?: string;
+}
+
+/**
+ * Deterministic, SSR-safe id suffix: two logos with the same colour share the
+ * same gradients (correct), two logos with different colours never clash.
+ * The old hard-coded `paint0_linear` ids made the 2nd logo reuse the 1st palette.
+ */
+function hashId(input: string): string {
+  let h = 5381;
+  for (let i = 0; i < input.length; i++) h = ((h << 5) + h + input.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
 }
 
 export default function Logo({
-  primaryColor = "#4A7BF5",
+  primaryColor = "var(--primary-color, #0072a5)",
+  title = "Diamond",
   width = "100%",
   height = "100%",
-  className = "",
+  className,
   ...props
 }: LogoProps) {
-  // Helper function to convert hex to HSL
-  const hexToHSL = (hex: string) => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    if (!result) return { h: 210, s: 90, l: 60 };
+  const uid = hashId(primaryColor);
+  const gid = (name: string) => `diamond-${uid}-${name}`;
 
-    const r = parseInt(result[1], 16) / 255;
-    const g = parseInt(result[2], 16) / 255;
-    const b = parseInt(result[3], 16) / 255;
+  // `color-mix(in oklch, …)` scales lightness while preserving hue/chroma —
+  // unlike the old `l - 30` / `s - 20` maths that collapsed to grey or white.
+  const shade = (blackPct: number) =>
+    `color-mix(in oklch, ${primaryColor}, black ${blackPct}%)`;
+  const tint = (whitePct: number) =>
+    `color-mix(in oklch, ${primaryColor}, white ${whitePct}%)`;
 
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    let h,
-      s,
-      l = (max + min) / 2;
-
-    if (max === min) {
-      h = s = 0;
-    } else {
-      const d = max - min;
-      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-      switch (max) {
-        case r:
-          h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-          break;
-        case g:
-          h = ((b - r) / d + 2) / 6;
-          break;
-        case b:
-          h = ((r - g) / d + 4) / 6;
-          break;
-        default:
-          h = 0;
-      }
-    }
-
-    return {
-      h: Math.round(h * 360),
-      s: Math.round(s * 100),
-      l: Math.round(l * 100),
-    };
-  };
-
-  // Generate color variations based on primary color
-  const { h, s, l } = hexToHSL(primaryColor);
-
-  const colors = {
-    darkest: `hsl(${h}, ${s}%, ${Math.max(l - 30, 15)}%)`,
-    darker: `hsl(${h}, ${s}%, ${Math.max(l - 20, 25)}%)`,
-    base: `hsl(${h}, ${s}%, ${l}%)`,
-    lighter: `hsl(${h}, ${Math.max(s - 10, 70)}%, ${Math.min(l + 10, 75)}%)`,
-    lightest: `hsl(${h}, ${Math.max(s - 20, 50)}%, ${Math.min(l + 25, 90)}%)`,
-    highlight: `hsl(${h}, ${Math.max(s - 30, 30)}%, ${Math.min(l + 35, 97)}%)`,
+  const c = {
+    sparkle: tint(72),   // near-white, top highlight
+    light:   tint(45),   // lit crown facet
+    soft:    tint(25),   // gently lit
+    base:    primaryColor,
+    darker:  shade(28),  // shadow
+    darkest: shade(45),  // deepest shadow at the culet
   };
 
   return (
@@ -72,120 +56,48 @@ export default function Logo({
       viewBox="0 0 186 249"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
+      role={title ? "img" : undefined}
+      aria-hidden={title ? undefined : true}
       {...props}
     >
-      <title>diamond</title>
-      {/* Top left section - darkest facet */}
-      <path
-        d="M99,0 L0,155.5 L65.5,101 Z"
-        fill="url(#paint0_linear)"
-        stroke="none"
-      />
-
-      {/* Top middle section - brightest top facet */}
-      <path
-        d="M95,95.5 L65.5,101 L99,0 Z"
-        fill="url(#paint1_linear)"
-        stroke="none"
-      />
-
-      {/* Middle left section - medium facet */}
-      <path
-        d="M95,95.5 L65.5,101 L0,155.5 Z"
-        fill={colors.base}
-        stroke="none"
-      />
-
-      {/* Middle horizontal section - transitional facet */}
-      <path
-        d="M95,95.5 L0,155.5 L185.5,95.5 Z"
-        fill="url(#paint2_linear)"
-        stroke="none"
-      />
-
-      {/* Bottom horizontal section - darker middle */}
-      <path
-        d="M91,155.5 L185.5,95.5 L0,155.5 Z"
-        fill={colors.darker}
-        stroke="none"
-      />
-
-      {/* Bottom right large section - main bright facet */}
-      <path
-        d="M87.5,249 L121,149.5 L185.5,95.5 Z"
-        fill="url(#paint3_linear)"
-        stroke="none"
-      />
-
-      {/* Bottom middle section - bright highlight */}
-      <path
-        d="M91,155.5 L121,149.5 L87.5,249 Z"
-        fill={colors.lighter}
-        stroke="none"
-      />
-
-      {/* Bottom left section - complementary facet */}
-      <path
-        d="M91,155.5 L121,149.5 L185.5,95.5 Z"
-        fill={colors.lighter}
-        stroke="none"
-      />
+      {title ? <title>{title}</title> : null}
 
       <defs>
-        {/* Top left - dark to light gradient for depth */}
-        <linearGradient
-          id="paint0_linear"
-          x1="0%"
-          y1="0%"
-          x2="100%"
-          y2="100%"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop offset="0%" stopColor={colors.darkest} />
-          <stop offset="50%" stopColor={colors.base} />
-          <stop offset="100%" stopColor={colors.highlight} />
+        {/* crown · outer left: bright top → brand colour at the girdle */}
+        <linearGradient id={gid("crown")} x1="0" y1="0" x2="0.25" y2="1">
+          <stop offset="0" stopColor={c.light} />
+          <stop offset="1" stopColor={c.base} />
         </linearGradient>
 
-        {/* Top center - bright reflective surface */}
-        <linearGradient
-          id="paint1_linear"
-          x1="0%"
-          y1="50%"
-          x2="100%"
-          y2="50%"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop offset="0%" stopColor={colors.base} />
-          <stop offset="100%" stopColor={colors.lightest} />
+        {/* table: lit top edge fading into the brand colour */}
+        <linearGradient id={gid("table")} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor={c.soft} />
+          <stop offset="1" stopColor={c.base} />
         </linearGradient>
 
-        {/* Middle horizontal - vertical depth gradient */}
-        <linearGradient
-          id="paint2_linear"
-          x1="50%"
-          y1="0%"
-          x2="50%"
-          y2="100%"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop offset="0%" stopColor={colors.lighter} />
-          <stop offset="100%" stopColor={colors.base} />
-        </linearGradient>
-
-        {/* Bottom - largest facet with dramatic light */}
-        <linearGradient
-          id="paint3_linear"
-          x1="0%"
-          y1="0%"
-          x2="100%"
-          y2="100%"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop offset="0%" stopColor={colors.darkest} />
-          <stop offset="60%" stopColor={colors.base} />
-          <stop offset="100%" stopColor={colors.highlight} />
+        {/* pavilion · right: brand colour at the girdle → shadow at the culet */}
+        <linearGradient id={gid("pavilion")} x1="1" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor={c.base} />
+          <stop offset="1" stopColor={c.darker} />
         </linearGradient>
       </defs>
+
+      {/* crown · outer left */}
+      <path d="M99,0 L0,155.5 L65.5,101 Z" fill={`url(#${gid("crown")})`} />
+      {/* crown · top highlight */}
+      <path d="M95,95.5 L65.5,101 L99,0 Z" fill={c.sparkle} />
+      {/* crown · inner left */}
+      <path d="M95,95.5 L65.5,101 L0,155.5 Z" fill={c.base} />
+      {/* table */}
+      <path d="M95,95.5 L0,155.5 L185.5,95.5 Z" fill={`url(#${gid("table")})`} />
+      {/* pavilion · left */}
+      <path d="M91,155.5 L185.5,95.5 L0,155.5 Z" fill={c.darker} />
+      {/* pavilion · right, large */}
+      <path d="M87.5,249 L121,149.5 L185.5,95.5 Z" fill={`url(#${gid("pavilion")})`} />
+      {/* pavilion · bottom point (culet) */}
+      <path d="M91,155.5 L121,149.5 L87.5,249 Z" fill={c.darkest} />
+      {/* pavilion · inner right rim light */}
+      <path d="M91,155.5 L121,149.5 L185.5,95.5 Z" fill={c.soft} />
     </svg>
   );
 }

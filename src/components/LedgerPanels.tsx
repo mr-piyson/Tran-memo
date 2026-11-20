@@ -93,6 +93,7 @@ export function DealersPanel({
   selectedId,
   currency,
   active,
+  desktopActive,
   onSelect,
   onNewDealer,
 }: {
@@ -102,6 +103,7 @@ export function DealersPanel({
   selectedId: number | null;
   currency: Currency;
   active: boolean;
+  desktopActive: boolean;
   onSelect: (id: number) => void;
   onNewDealer: () => void;
 }) {
@@ -137,8 +139,9 @@ export function DealersPanel({
   return (
     <section
       className={cn(
-        "relative flex min-h-0 w-full shrink-0 flex-col border-r md:w-80",
+        "relative flex min-h-0 w-full shrink-0 flex-col border-r lg:w-80",
         !active && "max-lg:hidden",
+        !desktopActive && "lg:hidden",
       )}
     >
       <div className="ledger-header">
@@ -243,6 +246,7 @@ export function LedgerNotesPanel({
   selectedId,
   currency,
   active,
+  desktopActive,
   onBack,
   onSelect,
   onNewNote,
@@ -254,6 +258,7 @@ export function LedgerNotesPanel({
   selectedId: number | null;
   currency: Currency;
   active: boolean;
+  desktopActive: boolean;
   onBack: () => void;
   onSelect: (id: number) => void;
   onNewNote: () => void;
@@ -270,8 +275,9 @@ export function LedgerNotesPanel({
   return (
     <section
       className={cn(
-        "relative flex min-h-0 w-full shrink-0 flex-col border-r md:w-80",
+        "relative flex min-h-0 w-full shrink-0 flex-col border-r lg:w-80",
         !active && "max-lg:hidden",
+        !desktopActive && "lg:hidden",
       )}
     >
       <div className="ledger-header">

@@ -277,6 +277,7 @@ export default function App() {
                 selectedId={selectedDealerId}
                 currency={currency}
                 active={mobilePane === "dealers"}
+                desktopActive={mobilePane === "dealers"}
                 onSelect={selectDealer}
                 onNewDealer={() => setShowNewDealer(true)}
               />
@@ -289,6 +290,7 @@ export default function App() {
                 selectedId={selectedNoteId}
                 currency={currency}
                 active={mobilePane === "notes"}
+                desktopActive={mobilePane !== "dealers"}
                 onBack={() => setMobilePane("dealers")}
                 onSelect={selectNote}
                 onNewNote={() => setShowNewNote(true)}
