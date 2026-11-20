@@ -1,13 +1,13 @@
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap");
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --font-heading: var(--font-sans);
-  --font-sans: "Geist Variable", sans-serif;
+  --font-sans: "Roboto", system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -43,6 +43,11 @@
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
+  --color-primary-hover: var(--primary-hover);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-panel: var(--panel);
+  --color-amount-blue: var(--amount-blue);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -52,81 +57,54 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --positive: oklch(0.62 0.14 155);
-  --positive-foreground: oklch(1 0 0);
-  --negative: oklch(0.62 0.2 25);
-  --negative-foreground: oklch(1 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
+/* Dark-only palette from LEDGER_DESIGN.md §3 / ledger-poc.html. */
+:root,
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --positive: oklch(0.75 0.13 155);
-  --positive-foreground: oklch(0.145 0 0);
-  --negative: oklch(0.72 0.17 25);
-  --negative-foreground: oklch(0.145 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #1a1a1a;
+  --foreground: #f2f2f2;
+  --card: #2b2b2b;
+  --card-foreground: #f2f2f2;
+  --popover: #2b2b2b;
+  --popover-foreground: #f2f2f2;
+  --primary: #0072a5;
+  --primary-hover: #1a80ae;
+  --primary-foreground: #ffffff;
+  --secondary: #292929;
+  --secondary-foreground: #d9d9d9;
+  --muted: #232323;
+  --muted-foreground: #8a8a8a;
+  --accent: #3a3a3a;
+  --accent-foreground: #f2f2f2;
+  --destructive: #b0063f;
+  --destructive-foreground: #ffffff;
+  --border: #3a3a3a;
+  --input: #292929;
+  --ring: #1a80ae;
+  --radius: 0.75rem;
+  --panel: #1c1c1c;
+  --amount-blue: #387cf8;
+  --bar-blue: #356bce;
+  --success: #00a859;
+  --danger: #c2074f;
+  --bar-green: #1a5a3b;
+  --bar-red: #980542;
+  --positive: #00a859;
+  --positive-foreground: #ffffff;
+  --negative: #c2074f;
+  --negative-foreground: #ffffff;
+  --chart-1: #387cf8;
+  --chart-2: #00a859;
+  --chart-3: #1a80ae;
+  --chart-4: #c2074f;
+  --chart-5: #8a8a8a;
+  --sidebar: #232323;
+  --sidebar-foreground: #d6d6d6;
+  --sidebar-primary: #0072a5;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #3a3a3a;
+  --sidebar-accent-foreground: #f2f2f2;
+  --sidebar-border: #3a3a3a;
+  --sidebar-ring: #1a80ae;
 }
 
 @layer base {
@@ -138,6 +116,7 @@
   }
   html {
     @apply font-sans;
+    color-scheme: dark;
   }
 }
 
@@ -146,3 +125,199 @@ body,
 #root {
   height: 100%;
 }
+
+/* ---------- Ledger UI (dark, chat-like) ---------- */
+
+.ledger-avatar {
+  border-radius: 50%;
+  background: #c3d7f9;
+  color: #2f6ac4;
+  font-weight: 500;
+  flex: none;
+}
+.ledger-avatar[data-size="sm"] { width: 36px; height: 36px; font-size: 14px; }
+.ledger-avatar[data-size="md"] { width: 48px; height: 48px; font-size: 18px; }
+.ledger-avatar[data-size="lg"] { width: 64px; height: 64px; font-size: 22px; }
+
+.ledger-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 60px;
+  flex: none;
+  padding: 0 12px;
+  background: var(--card);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+}
+.ledger-header-title { font-size: 16px; line-height: 1.15; }
+.ledger-header-sub { font-size: 12px; color: var(--muted-foreground); }
+
+.ledger-search {
+  border: 2px solid #0b5f88;
+  border-radius: 10px;
+  background: var(--panel);
+  color: #bdbdbd;
+  height: 40px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ledger-search input {
+  flex: 1;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  font-size: 16px;
+  color: var(--foreground);
+  background: none;
+  border: 0;
+  outline: 0;
+}
+.ledger-search input::placeholder { color: var(--muted-foreground); }
+
+.ledger-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  text-align: left;
+  transition: background 0.15s;
+}
+.ledger-row:hover { background: rgba(255, 255, 255, 0.05); }
+.ledger-row[data-selected="true"] { background: var(--accent); }
+.ledger-row-name { font-size: 15px; }
+.ledger-row-meta { font-size: 11px; color: var(--muted-foreground); }
+.ledger-row-total { font-size: 14px; font-weight: 500; }
+
+.ledger-code {
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0.2px;
+  color: var(--amount-blue);
+}
+.ledger-code-card {
+  position: relative;
+  margin: 10px 12px 0;
+  border-radius: 12px;
+  background: linear-gradient(#2e2e2e, #262626);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  cursor: pointer;
+}
+.ledger-code-card:hover { background: linear-gradient(#343434, #2a2a2a); }
+.ledger-code-card[data-selected="true"] { outline: 2px solid var(--primary-hover); }
+.ledger-code-card-bar {
+  height: 3px;
+  background: linear-gradient(90deg, var(--tone, var(--bar-blue)), transparent 92%);
+}
+
+.ledger-fab {
+  position: absolute;
+  right: 16px;
+  bottom: 18px;
+  width: 54px;
+  height: 54px;
+  min-width: 54px;
+  border-radius: 16px;
+  background: var(--primary);
+  color: #cfe9f5;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  z-index: 5;
+}
+.ledger-fab svg { width: 28px; height: 28px; }
+.ledger-fab:active { transform: scale(0.96); }
+
+.ledger-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 12px;
+  margin: 16px 0 8px;
+  position: relative;
+}
+.ledger-divider::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: #0b6a99;
+}
+.ledger-divider span {
+  position: relative;
+  background: var(--primary);
+  color: #fff;
+  font-size: 8px;
+  padding: 2px 14px;
+  border-radius: 3px;
+}
+
+.ledger-bubble {
+  position: relative;
+  max-width: 78%;
+  border-radius: 12px;
+  padding: 8px 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  background: linear-gradient(#2e2e2e, #262626);
+}
+.ledger-bubble[data-kind="income"] { border-bottom-left-radius: 4px; }
+.ledger-bubble[data-kind="expense"] { border-bottom-right-radius: 4px; }
+.ledger-bubble-bar {
+  height: 3px;
+  margin: 6px -12px 6px;
+  background: linear-gradient(90deg, var(--tone), transparent 92%);
+}
+.ledger-bubble-amount { font-size: 18px; }
+.ledger-bubble-note { font-size: 10px; color: #bdbdbd; }
+.ledger-bubble-time { font-size: 8px; color: var(--muted-foreground); }
+
+.ledger-composer {
+  margin: 0 12px 12px;
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  flex: none;
+}
+.ledger-composer-kind { display: flex; gap: 8px; padding: 8px 10px 0; }
+.ledger-composer-row1 { display: flex; align-items: center; gap: 8px; padding: 6px 10px 4px; }
+.ledger-composer-amount {
+  flex: 1;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: right;
+  font-size: 18px;
+  color: var(--tone);
+}
+.ledger-composer-amount::placeholder { color: #6f8f7d; }
+.ledger-composer-bar {
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--tone));
+}
+.ledger-composer-row2 { display: flex; align-items: center; gap: 8px; padding: 6px 10px 8px; }
+.ledger-composer-note { flex: 1; min-width: 0; height: auto; padding: 0; border: 0; background: transparent; font-size: 14px; }
+.ledger-composer-note::placeholder { color: var(--muted-foreground); }
+
+.ledger-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: #4b4b4b;
+  font-size: 26px;
+  font-weight: 300;
+  padding: 32px;
+  text-align: center;
+}
+.ledger-empty svg { width: 90px; height: 90px; }

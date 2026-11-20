@@ -1,6 +1,7 @@
 import {
   MessageCircleIcon,
   PlusIcon,
+  ReceiptTextIcon,
   SettingsIcon,
 } from "lucide-react";
 import {
@@ -19,13 +20,15 @@ import {
 } from "@/components/ui/sidebar";
 
 interface AppSidebarProps {
-  onNotes: () => void;
+  onDealers: () => void;
+  onNewDealer: () => void;
   onNewNote: () => void;
   onSettings: () => void;
 }
 
 export default function AppSidebar({
-  onNotes,
+  onDealers,
+  onNewDealer,
   onNewNote,
   onSettings,
 }: AppSidebarProps) {
@@ -58,15 +61,21 @@ export default function AppSidebar({
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton tooltip="Notes" isActive onClick={() => run(onNotes)}>
+                <SidebarMenuButton tooltip="Dealers" isActive onClick={() => run(onDealers)}>
                   <MessageCircleIcon />
-                  <span>Notes</span>
+                  <span>Dealers</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton tooltip="New note" onClick={() => run(onNewNote)}>
+                <SidebarMenuButton tooltip="New dealer" onClick={() => run(onNewDealer)}>
                   <PlusIcon />
-                  <span>New note</span>
+                  <span>New dealer</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton tooltip="New ledger note" onClick={() => run(onNewNote)}>
+                  <ReceiptTextIcon />
+                  <span>New ledger note</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
