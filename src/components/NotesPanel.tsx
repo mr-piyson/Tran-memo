@@ -60,8 +60,8 @@ export default function NotesPanel(props: NotesPanelProps) {
   return (
     <aside
       class={[
-        "min-h-0 w-full shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 md:flex md:w-80 lg:w-96",
-        props.hiddenOnMobile ? "hidden" : "flex",
+        "flex min-h-0 w-full shrink-0 flex-col border-r border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 md:w-80 lg:w-96",
+        props.hiddenOnMobile && "max-md:hidden",
       ]}
     >
       <div class="shrink-0 space-y-3 px-4 pb-3 pt-5">

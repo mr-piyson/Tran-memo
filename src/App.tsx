@@ -136,33 +136,35 @@ export default function App() {
 
   return (
     <div class="flex h-dvh flex-col overflow-hidden bg-slate-100 font-sans text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <div class="flex min-h-0 flex-1 overflow-hidden">
-        <NotesPanel
-          notes={notes as Accessor<Note[]>}
-          entries={entries as Accessor<Entry[]>}
-          selectedId={selectedId as Accessor<number | null>}
-          currency={currency as Accessor<Currency>}
-          hiddenOnMobile={mobileView() === "chat"}
-          onSelect={selectNote}
+      <div class="flex min-h-0 flex-1 flex-col md:flex-row">
+        <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+          <NotesPanel
+            notes={notes as Accessor<Note[]>}
+            entries={entries as Accessor<Entry[]>}
+            selectedId={selectedId as Accessor<number | null>}
+            currency={currency as Accessor<Currency>}
+            hiddenOnMobile={mobileView() === "chat"}
+            onSelect={selectNote}
+            onNewNote={() => setShowNewNote(true)}
+          />
+          <ChatPanel
+            note={selectedNote}
+            entries={selectedEntries}
+            currency={currency}
+            loading={loading()}
+            hiddenOnMobile={mobileView() === "list"}
+            onBack={() => setMobileView("list")}
+            onDeleteNote={deleteNote}
+            onAddEntry={addEntry}
+            onRemoveEntry={removeEntry}
+          />
+        </div>
+
+        <Rail
           onNewNote={() => setShowNewNote(true)}
-        />
-        <ChatPanel
-          note={selectedNote}
-          entries={selectedEntries}
-          currency={currency}
-          loading={loading()}
-          hiddenOnMobile={mobileView() === "list"}
-          onBack={() => setMobileView("list")}
-          onDeleteNote={deleteNote}
-          onAddEntry={addEntry}
-          onRemoveEntry={removeEntry}
+          onSettings={() => setShowSettings(true)}
         />
       </div>
-
-      <Rail
-        onNewNote={() => setShowNewNote(true)}
-        onSettings={() => setShowSettings(true)}
-      />
 
       <Show when={error()}>
         {(message) => (

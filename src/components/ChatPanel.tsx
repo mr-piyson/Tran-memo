@@ -83,8 +83,8 @@ export default function ChatPanel(props: ChatPanelProps) {
   return (
     <section
       class={[
-        "min-h-0 min-w-0 flex-1 flex-col bg-[#f7f9fb] dark:bg-slate-950 md:flex",
-        props.hiddenOnMobile ? "hidden" : "flex",
+        "flex min-h-0 min-w-0 flex-1 flex-col bg-[#f7f9fb] dark:bg-slate-950",
+        props.hiddenOnMobile && "max-md:hidden",
       ]}
     >
       <Show
