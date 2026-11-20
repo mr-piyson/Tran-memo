@@ -9,7 +9,12 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "release:macos": "bash scripts/release.sh macos",
+    "release:windows": "bash scripts/release.sh windows",
+    "release:android": "bash scripts/release.sh android",
+    "release:ios": "bash scripts/release.sh ios",
+    "release:all": "bash scripts/release.sh all"
   },
   "license": "MIT",
   "dependencies": {

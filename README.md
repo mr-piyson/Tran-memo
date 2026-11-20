@@ -49,6 +49,20 @@ folder is git-ignored, so local builds never pollute version control:
 - `Ledger-Notes_0.1.0_arm64.apk` — Android (arm64-v8a, debug-signed)
 - `Ledger-Notes_0.1.0_unsigned.ipa` — iOS device (arm64, unsigned)
 
+Rebuild one artifact or all of them with:
+
+```bash
+pnpm release:macos
+pnpm release:windows
+pnpm release:android
+pnpm release:ios
+pnpm release:all
+```
+
+Each script builds the target, copies the installer into `.releases/`, and signs
+the Android APK when a debug keystore is available. The scripts live in
+`scripts/release.sh`.
+
 ## Build
 
 ```bash
