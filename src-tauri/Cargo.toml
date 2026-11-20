@@ -32,3 +32,8 @@ lto = true
 opt-level = 3
 panic = "abort"
 strip = true
+
+# Host proc-macros (e.g. sqlx-macros) are built with the release profile too. Stripping
+# them produces a corrupt dylib on macOS with this toolchain, so keep symbols intact.
+[profile.release.build-override]
+strip = false

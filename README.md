@@ -45,10 +45,39 @@ pnpm tauri dev
 pnpm tauri build
 ```
 
+macOS outputs land in `src-tauri/target/release/bundle/` (`Ledger Notes.app` and a `.dmg`).
+
+`src-tauri/Cargo.toml` keeps `strip = false` for host build artifacts via
+`[profile.release.build-override]`. Without it, `sqlx-macros` produces a corrupt
+proc-macro dylib on macOS and release builds fail with a `LINKEDIT` load error.
+
 ## Mobile
 
+Android requires JDK 17, the Android SDK platform/NDK expected by the installed
+Tauri CLI, and `ANDROID_HOME` / `NDK_HOME` environment variables. For a CI-style
+setup on macOS with Homebrew:
+
 ```bash
-pnpm tauri android init
+brew install openjdk@17 android-commandlinetools
+
+export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+export ANDROID_HOME=/opt/homebrew/share/android-commandlinetools
+export NDK_HOME="$ANDROID_HOME/ndk/<installed-ndk-version>"
+export PATH="$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
+
+sdkmanager --sdk_root="$ANDROID_HOME" --licenses
+pnpm tauri android init --ci
+pnpm tauri android build --ci --apk -t aarch64
+```
+
+If `sdkmanager` only offers a dotted platform revision (e.g. `platforms;android-37.0`),
+install it and create an `android-37` symlink in `$ANDROID_HOME/platforms` so the
+generated Gradle project can find it. APKs are written to
+`src-tauri/gen/android/app/build/outputs/apk/`.
+
+For development:
+
+```bash
 pnpm tauri android dev
 
 pnpm tauri ios init
