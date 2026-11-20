@@ -1,5 +1,6 @@
 import { createMemo, createSignal, For, onSettled, Show, type Accessor } from "solid-js";
 import ChatPanel from "./components/ChatPanel";
+import EmojiPicker from "./components/EmojiPicker";
 import Modal from "./components/Modal";
 import NotesPanel from "./components/NotesPanel";
 import Rail from "./components/Rail";
@@ -16,7 +17,7 @@ import {
 } from "./lib/entries";
 import "./index.css";
 
-const EMOJIS = ["💬", "🛒", "🍽️", "🏠", "🚗", "💼", "🎁", "✈️", "📚", "💡"];
+const DEFAULT_EMOJI = "💬";
 
 export default function App() {
   const [notes, setNotes] = createSignal<Note[]>([]);
@@ -29,7 +30,7 @@ export default function App() {
   const [showSettings, setShowSettings] = createSignal(false);
   const [showNewNote, setShowNewNote] = createSignal(false);
   const [newTitle, setNewTitle] = createSignal("");
-  const [newEmoji, setNewEmoji] = createSignal(EMOJIS[0]);
+  const [newEmoji, setNewEmoji] = createSignal(DEFAULT_EMOJI);
   const [savingNote, setSavingNote] = createSignal(false);
 
   const selectedNote = createMemo(
@@ -111,7 +112,7 @@ export default function App() {
       setSelectedId(note.id);
       setMobileView("chat");
       setNewTitle("");
-      setNewEmoji(EMOJIS[0]);
+      setNewEmoji(DEFAULT_EMOJI);
       setShowNewNote(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -239,27 +240,8 @@ export default function App() {
               <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 Avatar
               </p>
-              <div class="mt-2 grid grid-cols-5 gap-2">
-                <For each={EMOJIS}>
-                  {(emoji) => (
-                    <button
-                      type="button"
-                      aria-label={`Use ${emoji}`}
-                      onClick={() => setNewEmoji(emoji)}
-                      class={[
-                        "flex size-11 items-center justify-center rounded-xl border text-xl transition",
-                        {
-                          "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10":
-                            newEmoji() === emoji,
-                          "border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800":
-                            newEmoji() !== emoji,
-                        },
-                      ]}
-                    >
-                      {emoji}
-                    </button>
-                  )}
-                </For>
+              <div class="mt-2">
+                <EmojiPicker value={newEmoji()} onChange={setNewEmoji} />
               </div>
             </div>
             <button

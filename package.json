@@ -13,10 +13,12 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@emoji-mart/data": "^1.2.1",
     "@solidjs/web": "^2.0.3",
     "@tanstack/virtual-core": "^3.19.11",
     "@tauri-apps/api": "^2.12.5",
     "@tauri-apps/plugin-sql": "^2.6.0",
+    "emoji-mart": "^5.6.0",
     "solid-js": "^2.0.3"
   },
   "devDependencies": {
