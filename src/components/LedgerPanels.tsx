@@ -171,7 +171,7 @@ export function DealersPanel({
           <EmptyLedger text={search ? "No matches" : "There are no dealers"} />
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 px-2 pb-24">
+        <div className="flex min-h-0 flex-1 pb-24">
           <ListGrid
             rows={filtered}
             getRowId={(dealer) => String(dealer.id)}
@@ -189,7 +189,9 @@ export function DealersPanel({
                   <LedgerAvatar dealer={dealer} />
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2">
-                      <span className="ledger-row-name truncate">{dealer.name}</span>
+                      <span className="ledger-row-name truncate" title={dealer.name}>
+                        {dealer.name}
+                      </span>
                       {summary?.last && (
                         <span className="ledger-row-meta shrink-0">
                           {formatListDate(summary.last.created_at)}
@@ -197,7 +199,10 @@ export function DealersPanel({
                       )}
                     </span>
                     <span className="mt-1 flex items-center justify-between gap-2">
-                      <span className="ledger-row-meta truncate">
+                      <span
+                        className="ledger-row-meta truncate"
+                        title={`${dealer.phone || "—"}${summary ? ` · ${summary.count} tx` : " · no transactions"}`}
+                      >
                         {dealer.phone || "—"}
                         {summary ? ` · ${summary.count} tx` : " · no transactions"}
                       </span>
@@ -301,11 +306,11 @@ export function LedgerNotesPanel({
           <EmptyLedger text="No ledger notes yet" />
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 px-2 pb-24">
+        <div className="flex min-h-0 flex-1 pb-24">
           <ListGrid
             rows={notes}
             getRowId={(note) => String(note.id)}
-            rowHeight={78}
+            rowHeight={88}
             renderRow={(note) => {
               const summary = summaries.get(note.id);
               const noteTotal = summary?.total ?? 0;
@@ -332,7 +337,10 @@ export function LedgerNotesPanel({
                         )}
                       </span>
                       <span className="mt-1 flex items-center justify-between gap-2">
-                        <span className="ledger-row-meta truncate">
+                        <span
+                          className="ledger-row-meta truncate"
+                          title={`${note.label || "Ledger note"} · ${summary?.count ?? 0} tx`}
+                        >
                           {note.label || "Ledger note"}
                           {` · ${summary?.count ?? 0} tx`}
                         </span>
@@ -528,7 +536,7 @@ export function LedgerThread({
           </div>
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1 px-3 py-2">
+        <div className="flex min-h-0 flex-1 py-2">
           <ListGrid
             rows={rows}
             getRowId={(row) => row.id}
@@ -550,7 +558,7 @@ export function LedgerThread({
               return (
                 <div
                   className={cn(
-                    "group flex w-full items-center gap-2 py-1",
+                    "group flex w-full items-center gap-2 px-3 py-1",
                     isIncome ? "justify-start" : "justify-end",
                   )}
                 >
@@ -570,7 +578,9 @@ export function LedgerThread({
                       <span className="ledger-bubble-time">{formatTime(entry.created_at)}</span>
                     </div>
                     <div className="ledger-bubble-bar" />
-                    <div className="ledger-bubble-note break-words">{entry.description}</div>
+                    <div className="ledger-bubble-note break-words" title={entry.description}>
+                      {entry.description}
+                    </div>
                   </div>
                   <Button
                     variant="ghost"
