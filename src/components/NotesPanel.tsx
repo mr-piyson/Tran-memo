@@ -15,6 +15,7 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import {
   formatAmount,
@@ -88,11 +89,14 @@ export default function NotesPanel({
     >
       <div className="flex shrink-0 flex-col gap-3 px-4 pb-3 pt-5">
         <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-              Ledger Notes
-            </p>
-            <h1 className="mt-0.5 text-xl font-bold">Chats</h1>
+          <div className="flex min-w-0 items-center gap-2">
+            <SidebarTrigger className="-ml-1" />
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+                Ledger Notes
+              </p>
+              <h1 className="mt-0.5 text-xl font-bold">Chats</h1>
+            </div>
           </div>
           <Button size="icon" aria-label="New note" onClick={onNewNote}>
             <PlusIcon />

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import AppSidebar from "./components/AppSidebar";
 import ChatPanel from "./components/ChatPanel";
 import EmojiPicker from "./components/EmojiPicker";
 import NotesPanel from "./components/NotesPanel";
-import Rail from "./components/Rail";
 import {
   Alert,
   AlertDescription,
@@ -37,6 +37,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  SidebarInset,
+  SidebarProvider,
+} from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   CURRENCIES,
@@ -174,138 +178,143 @@ export default function App() {
 
   return (
     <TooltipProvider>
-      <div className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
-        <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-          <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-            <NotesPanel
-              notes={notes}
-              entries={entries}
-              selectedId={selectedId}
-              currency={currency}
-              hiddenOnMobile={mobileView === "chat"}
-              onSelect={selectNote}
-              onNewNote={() => setShowNewNote(true)}
-            />
-            <ChatPanel
-              note={selectedNote}
-              entries={selectedEntries}
-              currency={currency}
-              loading={loading}
-              hiddenOnMobile={mobileView === "list"}
-              onBack={() => setMobileView("list")}
-              onDeleteNote={deleteNote}
-              onAddEntry={addEntry}
-              onRemoveEntry={removeEntry}
-            />
-          </div>
-
-          <Rail
+      <SidebarProvider defaultOpen={false}>
+        <div className="flex h-dvh w-full overflow-hidden bg-background text-foreground">
+          <AppSidebar
+            onNotes={() => setMobileView("list")}
             onNewNote={() => setShowNewNote(true)}
             onSettings={() => setShowSettings(true)}
           />
-        </div>
 
-        {error && (
-          <Alert
-            variant="destructive"
-            className="fixed bottom-20 left-1/2 z-50 w-auto -translate-x-1/2 shadow-lg md:bottom-6"
-          >
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+          <SidebarInset className="min-w-0">
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+                <NotesPanel
+                  notes={notes}
+                  entries={entries}
+                  selectedId={selectedId}
+                  currency={currency}
+                  hiddenOnMobile={mobileView === "chat"}
+                  onSelect={selectNote}
+                  onNewNote={() => setShowNewNote(true)}
+                />
+                <ChatPanel
+                  note={selectedNote}
+                  entries={selectedEntries}
+                  currency={currency}
+                  loading={loading}
+                  hiddenOnMobile={mobileView === "list"}
+                  onBack={() => setMobileView("list")}
+                  onDeleteNote={deleteNote}
+                  onAddEntry={addEntry}
+                  onRemoveEntry={removeEntry}
+                />
+              </div>
+            </div>
 
-        <Dialog open={showSettings} onOpenChange={setShowSettings}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Settings</DialogTitle>
-              <DialogDescription>
-                Choose how amounts are displayed and where your data lives.
-              </DialogDescription>
-            </DialogHeader>
-            <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="currency">Currency</FieldLabel>
-                <Select
-                  items={currencyItems}
-                  value={currency}
-                  onValueChange={(value) => changeCurrency(value as Currency)}
-                >
-                  <SelectTrigger id="currency" className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent align="start">
-                    <SelectGroup>
-                      {CURRENCIES.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </Field>
-            </FieldGroup>
-            <Card size="sm">
-              <CardHeader>
-                <CardTitle>Storage</CardTitle>
-                <CardDescription>
-                  {isTauri()
-                    ? "Transactions are saved in a local SQLite database."
-                    : "Browser preview mode uses localStorage."}
-                </CardDescription>
-              </CardHeader>
-            </Card>
-            {!isTauri() && (
-              <Button variant="destructive" onClick={clearBrowserData}>
-                Clear browser preview data
-              </Button>
+            {error && (
+              <Alert
+                variant="destructive"
+                className="fixed bottom-20 left-1/2 z-50 w-auto -translate-x-1/2 shadow-lg md:bottom-6"
+              >
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
-            <DialogFooter>
-              <DialogClose render={<Button variant="outline" />}>Done</DialogClose>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
 
-        <Dialog open={showNewNote} onOpenChange={setShowNewNote}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>New note</DialogTitle>
-              <DialogDescription>
-                Start a conversation to track its income and expenses.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={createNote} className="flex flex-col gap-4">
-              <FieldGroup>
-                <Field>
-                  <FieldLabel htmlFor="note-title">Note title</FieldLabel>
-                  <Input
-                    id="note-title"
-                    type="text"
-                    required
-                    maxLength={60}
-                    autoFocus
-                    placeholder="e.g. Groceries"
-                    value={newTitle}
-                    onChange={(event) => setNewTitle(event.target.value)}
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel>Avatar</FieldLabel>
-                  <EmojiPicker value={newEmoji} onChange={setNewEmoji} />
-                </Field>
-              </FieldGroup>
-              <DialogFooter>
-                <DialogClose render={<Button variant="outline" type="button" />}>
-                  Cancel
-                </DialogClose>
-                <Button type="submit" disabled={savingNote}>
-                  Create note
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+            <Dialog open={showSettings} onOpenChange={setShowSettings}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Settings</DialogTitle>
+                  <DialogDescription>
+                    Choose how amounts are displayed and where your data lives.
+                  </DialogDescription>
+                </DialogHeader>
+                <FieldGroup>
+                  <Field>
+                    <FieldLabel htmlFor="currency">Currency</FieldLabel>
+                    <Select
+                      items={currencyItems}
+                      value={currency}
+                      onValueChange={(value) => changeCurrency(value as Currency)}
+                    >
+                      <SelectTrigger id="currency" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent align="start">
+                        <SelectGroup>
+                          {CURRENCIES.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {option}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                </FieldGroup>
+                <Card size="sm">
+                  <CardHeader>
+                    <CardTitle>Storage</CardTitle>
+                    <CardDescription>
+                      {isTauri()
+                        ? "Transactions are saved in a local SQLite database."
+                        : "Browser preview mode uses localStorage."}
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+                {!isTauri() && (
+                  <Button variant="destructive" onClick={clearBrowserData}>
+                    Clear browser preview data
+                  </Button>
+                )}
+                <DialogFooter>
+                  <DialogClose render={<Button variant="outline" />}>Done</DialogClose>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={showNewNote} onOpenChange={setShowNewNote}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>New note</DialogTitle>
+                  <DialogDescription>
+                    Start a conversation to track its income and expenses.
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={createNote} className="flex flex-col gap-4">
+                  <FieldGroup>
+                    <Field>
+                      <FieldLabel htmlFor="note-title">Note title</FieldLabel>
+                      <Input
+                        id="note-title"
+                        type="text"
+                        required
+                        maxLength={60}
+                        autoFocus
+                        placeholder="e.g. Groceries"
+                        value={newTitle}
+                        onChange={(event) => setNewTitle(event.target.value)}
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel>Avatar</FieldLabel>
+                      <EmojiPicker value={newEmoji} onChange={setNewEmoji} />
+                    </Field>
+                  </FieldGroup>
+                  <DialogFooter>
+                    <DialogClose render={<Button variant="outline" type="button" />}>
+                      Cancel
+                    </DialogClose>
+                    <Button type="submit" disabled={savingNote}>
+                      Create note
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </SidebarInset>
+        </div>
+      </SidebarProvider>
     </TooltipProvider>
   );
 }

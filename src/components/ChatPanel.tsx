@@ -10,6 +10,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   Card,
   CardDescription,
@@ -148,6 +149,7 @@ export default function ChatPanel({
             >
               <ArrowLeftIcon />
             </Button>
+            <SidebarTrigger className="md:hidden" />
             <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-xl">
               {note.emoji}
             </span>
