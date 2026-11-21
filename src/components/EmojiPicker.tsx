@@ -31,9 +31,9 @@ export default function EmojiPicker({ value, onChange }: EmojiPickerProps) {
     const picker = new Picker({
       data,
       theme: "auto",
-      perLine: 8,
-      emojiButtonSize: 32,
-      emojiSize: 22,
+      dynamicWidth: true,
+      emojiButtonSize: 34,
+      emojiSize: 24,
       previewPosition: "none",
       maxFrequentRows: 2,
       onEmojiSelect: (emoji: { native: string }) => {
@@ -67,11 +67,11 @@ export default function EmojiPicker({ value, onChange }: EmojiPickerProps) {
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-auto max-w-[calc(100%-2rem)] gap-0 overflow-hidden p-0 sm:max-w-fit">
-          <DialogHeader className="border-b p-4 pb-3">
+        <DialogContent className="flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-md flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+          <DialogHeader className="shrink-0 border-b p-4 pb-3">
             <DialogTitle>Choose avatar</DialogTitle>
           </DialogHeader>
-          <div className="border-b p-2">
+          <div className="shrink-0 border-b p-2">
             <Button
               type="button"
               variant={isDefault ? "secondary" : "ghost"}
@@ -85,7 +85,10 @@ export default function EmojiPicker({ value, onChange }: EmojiPickerProps) {
               Use default avatar
             </Button>
           </div>
-          <div ref={setHost} className="overflow-hidden" />
+          <div
+            ref={setHost}
+            className="min-h-0 flex-1 overflow-auto [&_em-emoji-picker]:!w-full [&_em-emoji-picker]:!max-w-full [&_em-emoji-picker]:!h-[min(60dvh,28rem)]"
+          />
         </DialogContent>
       </Dialog>
     </>
