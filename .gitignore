@@ -12,3 +12,6 @@ src-tauri/gen
 
 # Local release artifacts
 .releases/
+
+# Generated knowledge graph
+graphify-out/

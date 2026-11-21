@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import data from "@emoji-mart/data";
-import { init, Picker } from "emoji-mart";
 import { DealerAvatar, isDefaultAvatar } from "@/components/LedgerPanels";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +8,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-init({ data });
+// emoji-mart ships ~1 MB of data; load it only when the picker is opened.
+let pickerModule: Promise<typeof import("emoji-mart")> | undefined;
+let pickerData: typeof import("@emoji-mart/data") | undefined;
+function loadPicker() {
+  pickerModule ??= Promise.all([import("emoji-mart"), import("@emoji-mart/data")]).then(
+    ([mod, data]) => {
+      pickerData = data.default;
+      mod.init({ data: pickerData });
+      return mod;
+    },
+  );
+  return pickerModule;
+}
 
 interface EmojiPickerProps {
   value: string;
@@ -23,26 +33,40 @@ export default function EmojiPicker({ value, onChange }: EmojiPickerProps) {
   // still null when the picker effect runs. Track the node via a callback ref
   // and let its state update re-run the effect once the popup has mounted.
   const [host, setHost] = useState<HTMLDivElement | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!open || !host) return;
-    // emoji-mart mounts an <em-emoji-picker> custom element; its shipped types
-    // don't expose the HTMLElement surface, so narrow it here.
-    const picker = new Picker({
-      data,
-      theme: "auto",
-      dynamicWidth: true,
-      emojiButtonSize: 34,
-      emojiSize: 24,
-      previewPosition: "none",
-      maxFrequentRows: 2,
-      onEmojiSelect: (emoji: { native: string }) => {
-        onChange(emoji.native);
-        setOpen(false);
-      },
-    }) as unknown as HTMLElement;
-    host.appendChild(picker);
-    return () => picker.remove();
+    let cancelled = false;
+    let picker: HTMLElement | undefined;
+    setLoading(true);
+    loadPicker()
+      .then(({ Picker }) => {
+        if (cancelled) return;
+        // emoji-mart mounts an <em-emoji-picker> custom element; its shipped types
+        // don't expose the HTMLElement surface, so narrow it here.
+        picker = new Picker({
+          data: pickerData,
+          theme: "auto",
+          dynamicWidth: true,
+          emojiButtonSize: 34,
+          emojiSize: 24,
+          previewPosition: "none",
+          maxFrequentRows: 2,
+          onEmojiSelect: (emoji: { native: string }) => {
+            onChange(emoji.native);
+            setOpen(false);
+          },
+        }) as unknown as HTMLElement;
+        host.appendChild(picker);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+      picker?.remove();
+    };
   }, [open, host, onChange]);
 
   const isDefault = isDefaultAvatar(value);
@@ -88,7 +112,9 @@ export default function EmojiPicker({ value, onChange }: EmojiPickerProps) {
           <div
             ref={setHost}
             className="min-h-0 flex-1 overflow-auto [&_em-emoji-picker]:!w-full [&_em-emoji-picker]:!max-w-full [&_em-emoji-picker]:!h-[min(60dvh,28rem)]"
-          />
+          >
+            {loading && <span className="block p-4 text-sm text-muted-foreground">Loading…</span>}
+          </div>
         </DialogContent>
       </Dialog>
     </>

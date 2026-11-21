@@ -1,0 +1,10 @@
+id: no-ag-grid
+language: tsx
+message: ag-grid was replaced by TanStack Virtual — import from @tanstack/react-virtual instead
+severity: error
+files:
+  - src/**/*.ts
+  - src/**/*.tsx
+rule:
+  kind: string_fragment
+  regex: '^ag-grid-(community|react)$'

@@ -1,33 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { AgGridReact, type CustomCellRendererProps } from "ag-grid-react";
-import {
-  AllCommunityModule,
-  ModuleRegistry,
-  themeQuartz,
-  type ColDef,
-  type GridApi,
-  type GridReadyEvent,
-} from "ag-grid-community";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { cn } from "@/lib/utils";
-
-ModuleRegistry.registerModules([AllCommunityModule]);
-
-/** Dark single-column list theme — rows carry their own custom UI. */
-const ledgerGridTheme = themeQuartz.withParams({
-  backgroundColor: "var(--background)",
-  foregroundColor: "var(--foreground)",
-  borderColor: "transparent",
-  cellTextColor: "var(--foreground)",
-  rowHoverColor: "var(--overlay-hover)",
-  selectedRowBackgroundColor: "var(--accent)",
-  fontFamily: "Roboto, system-ui, sans-serif",
-  fontSize: 14,
-  cellHorizontalPadding: 0,
-  browserColorScheme: "dark",
-  wrapperBorder: false,
-  wrapperBorderRadius: 0,
-  rowBorder: { style: "none" },
-});
 
 interface ListGridProps<T> {
   rows: T[];
@@ -40,11 +13,7 @@ interface ListGridProps<T> {
   className?: string;
 }
 
-/**
- * ag-grid backed list. Every item is exactly one row with one full-width
- * custom cell, so the existing dark chat-style UI is preserved while ag-grid
- * handles virtualisation and scrolling.
- */
+/** Virtualized single-column list: one row per item, each row rendering its own UI. */
 export default function ListGrid<T>({
   rows,
   getRowId,
@@ -54,71 +23,65 @@ export default function ListGrid<T>({
   scrollKey,
   className,
 }: ListGridProps<T>) {
-  const apiRef = useRef<GridApi<T> | null>(null);
-  const [ready, setReady] = useState(false);
-  // Keep the column definition stable; the renderer always calls the latest
-  // callback without forcing ag-grid to rebuild its columns.
+  const [scrollEl, setScrollEl] = useState<HTMLDivElement | null>(null);
+  const [scrollReady, setScrollReady] = useState(false);
+  // Keep the renderer latest without rebuilding the virtualizer options.
   const renderRowRef = useRef(renderRow);
   renderRowRef.current = renderRow;
 
-  const columnDefs = useMemo<ColDef<T>[]>(
-    () => [
-      {
-        colId: "row",
-        flex: 1,
-        minWidth: 0,
-        sortable: false,
-        resizable: false,
-        suppressMovable: true,
-        cellRenderer: (params: CustomCellRendererProps<T>) => (
-          <div className="flex h-full w-full items-center [&>*]:w-full">{renderRowRef.current(params.data as T)}</div>
-        ),
-      },
-    ],
-    [],
-  );
+  const setScrollRef = useCallback((node: HTMLDivElement | null) => {
+    setScrollEl(node);
+    setScrollReady(node !== null);
+  }, []);
 
-  const getRowHeight = useMemo(
-    () => (params: { data?: T }) => {
-      if (!params.data) return typeof rowHeight === "number" ? rowHeight : 64;
-      return typeof rowHeight === "function" ? rowHeight(params.data) : rowHeight;
+  const estimateSize = useCallback(
+    (index: number) => {
+      const row = rows[index];
+      if (row === undefined) return typeof rowHeight === "number" ? rowHeight : 64;
+      return typeof rowHeight === "function" ? rowHeight(row) : rowHeight;
     },
-    [rowHeight],
+    [rows, rowHeight],
   );
 
+  const getItemKey = useCallback(
+    (index: number) => {
+      const row = rows[index];
+      return row === undefined ? index : getRowId(row);
+    },
+    [rows, getRowId],
+  );
+
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => scrollEl,
+    estimateSize,
+    getItemKey,
+    overscan: 10,
+  });
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scrollKey re-triggers autoscroll when switching lists of equal length
   useEffect(() => {
-    if (autoScrollToBottom && ready && apiRef.current && rows.length > 0) {
-      apiRef.current.ensureIndexVisible(rows.length - 1, "bottom");
-    }
-  }, [rows.length, autoScrollToBottom, scrollKey, ready]);
+    if (!autoScrollToBottom || !scrollReady || rows.length === 0) return;
+    virtualizer.scrollToIndex(rows.length - 1, { align: "end" });
+  }, [autoScrollToBottom, scrollReady, rows.length, scrollKey, virtualizer]);
 
   return (
-    <div
-      className={cn(
-        "min-h-0 flex-1",
-        "[&_.ag-root-wrapper]:border-0 [&_.ag-root-wrapper]:rounded-none [&_.ag-root-wrapper]:bg-transparent",
-        "[&_.ag-header]:hidden",
-        "[&_.ag-row]:border-0",
-        "[&_.ag-cell]:overflow-visible [&_.ag-cell]:border-0 [&_.ag-cell]:p-0 [&_.ag-cell]:!leading-normal",
-        "[&_.ag-row-hover]:bg-overlay-hover",
-        className,
-      )}
-    >
-      <AgGridReact<T>
-        theme={ledgerGridTheme}
-        rowData={rows}
-        columnDefs={columnDefs}
-        getRowId={(params) => getRowId(params.data)}
-        getRowHeight={getRowHeight}
-        headerHeight={0}
-        animateRows={false}
-        suppressCellFocus
-        rowBuffer={10}
-        onGridReady={(event: GridReadyEvent<T>) => {
-          apiRef.current = event.api;
-          setReady(true);
-        }}
-      />
+    <div ref={setScrollRef} className={cn("min-h-0 w-full flex-1 overflow-y-auto", className)}>
+      <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+        {virtualizer.getVirtualItems().map((item) => {
+          const row = rows[item.index];
+          if (row === undefined) return null;
+          return (
+            <div
+              key={item.key}
+              className="absolute top-0 left-0 flex w-full items-center [&>*]:w-full hover:bg-overlay-hover"
+              style={{ height: item.size, transform: `translateY(${item.start}px)` }}
+            >
+              {renderRowRef.current(row)}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -1,0 +1,9 @@
+id: no-console-log
+language: tsx
+message: Remove stray console.log before committing
+severity: warning
+files:
+  - src/**/*.ts
+  - src/**/*.tsx
+rule:
+  pattern: console.log($$$ARGS)

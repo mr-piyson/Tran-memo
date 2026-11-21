@@ -48,6 +48,7 @@ export default function Logo({
   };
 
   return (
+    // biome-ignore lint/a11y/noSvgWithoutTitle: title is rendered conditionally below with role/aria-hidden
     <svg
       width={width}
       height={height}

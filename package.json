@@ -9,6 +9,12 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "knip": "knip",
+    "lint": "biome check .",
+    "check": "pnpm typecheck && pnpm lint && pnpm knip && pnpm sg:check && pnpm build && pnpm size",
+    "size": "size-limit",
+    "sg:check": "ast-grep scan",
+    "find:cn": "ast-grep -p 'cn($$$ARGS)' src",
     "tauri": "tauri",
     "release:macos": "bash scripts/release.sh macos",
     "release:windows": "bash scripts/release.sh windows",
@@ -17,30 +23,42 @@
     "release:all": "bash scripts/release.sh all"
   },
   "license": "MIT",
+  "size-limit": [
+    {
+      "path": [
+        "dist/assets/index-*.js",
+        "dist/assets/index-*.css"
+      ],
+      "limit": "250 kB"
+    }
+  ],
   "dependencies": {
     "@base-ui/react": "^1.9.0",
     "@emoji-mart/data": "^1.2.1",
-    "@fontsource-variable/geist": "^5.3.0",
-    "@tauri-apps/api": "^2.12.5",
+    "@tanstack/react-virtual": "^3.14.26",
     "@tauri-apps/plugin-sql": "^2.6.0",
-    "ag-grid-community": "^36.3.0",
-    "ag-grid-react": "^36.3.0",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",
     "emoji-mart": "^5.6.0",
     "lucide-react": "^1.77.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "shadcn": "^4.23.0",
     "tw-animate-css": "^1.4.0"
   },
   "devDependencies": {
+    "@ast-grep/cli": "^0.51.3",
+    "@biomejs/biome": "^2.6.8",
+    "@size-limit/preset-app": "^14.3.0",
     "@tailwindcss/vite": "^4.3.5",
     "@tauri-apps/cli": "^2.12.6",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.3.0",
+    "knip": "^6.47.0",
+    "rollup-plugin-visualizer": "^7.1.3",
+    "shadcn": "^4.23.0",
+    "size-limit": "^14.3.0",
     "tailwindcss": "^4.3.5",
     "typescript": "~7.0.2",
     "vite": "^8.3.8"

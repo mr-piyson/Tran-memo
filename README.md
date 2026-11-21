@@ -1,6 +1,6 @@
 # Ledger Notes
 
-A cross-platform money-tracker note app built with Tauri 2, React 19, Vite 8, Tailwind CSS 4, shadcn/ui (Base UI primitives) and TypeScript. It uses a WhatsApp-inspired layout: a tools rail, a dealer list, a ledger-note list, and a chat-style transaction timeline. All list views are ag-grid lists with one custom cell per row.
+A cross-platform money-tracker note app built with Tauri 2, React 19, Vite 8, Tailwind CSS 4, shadcn/ui (Base UI primitives) and TypeScript. It uses a WhatsApp-inspired layout: a tools rail, a dealer list, a ledger-note list, and a chat-style transaction timeline. All list views are virtualized with one custom row renderer.
 
 Each dealer has ledger notes (`IN-00001`, `IN-00002`, …); each note is a conversation thread with its own income/expense entries (type, amount, description), stored in a local SQLite database.
 
@@ -14,7 +14,7 @@ Each dealer has ledger notes (`IN-00001`, `IN-00002`, …); each note is a conve
 | Styling | Tailwind CSS 4 (`@tailwindcss/vite`) |
 | Language | TypeScript 7 |
 | Storage | `@tauri-apps/plugin-sql` with SQLite, migrations in `src-tauri/src/lib.rs` |
-| Lists | `ag-grid-community` + `ag-grid-react` (one custom cell per row) |
+| Lists | `@tanstack/react-virtual` (virtualized single-column rows) |
 
 ## Features
 
@@ -136,7 +136,12 @@ pnpm tauri ios dev
 
 ```bash
 pnpm typecheck   # TypeScript check
+pnpm lint        # Biome lint (first-party code)
+pnpm knip        # Unused files / deps / exports
+pnpm sg:check    # Structural lint rules (e.g. no ag-grid imports)
 pnpm build       # Frontend production build
+pnpm size        # Bundle size budget (250 kB brotli)
+pnpm check       # All of the above in one command
 cargo check      # Rust check (run inside src-tauri)
 ```
 
@@ -148,9 +153,9 @@ Change the currency from the Settings modal (sidebar on desktop / tools rail on 
 
 - `src/App.tsx` — app state, data loading, settings, new-dealer/new-note dialogs
 - `src/components/AppSidebar.tsx` — tools rail
-- `src/components/ListGrid.tsx` — shared ag-grid single-row list
+- `src/components/ListGrid.tsx` — shared virtualized list (TanStack Virtual)
 - `src/components/LedgerPanels.tsx` — dealer list, ledger-note list, transaction thread and composer
-- `src/components/EmojiPicker.tsx` — emoji avatar picker in a shadcn Popover
+- `src/components/EmojiPicker.tsx` — emoji avatar picker (emoji-mart, loaded on demand)
 - `src/components/ui/` — generated shadcn/Base UI components
 - `src/lib/entries.ts` — SQLite/browser data store and formatting helpers
 - `src/lib/utils.ts` — shadcn `cn` helper

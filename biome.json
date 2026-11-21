@@ -1,0 +1,43 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.6.8/schema.json",
+  "files": {
+    "includes": [
+      "**",
+      "!dist/**",
+      "!graphify-out/**",
+      "!node_modules/**",
+      "!src-tauri/target/**",
+      "!src-tauri/gen/**",
+      "!.releases/**",
+      "!.cargo/**"
+    ]
+  },
+  "formatter": {
+    "enabled": false
+  },
+  "assist": {
+    "actions": {
+      "source": { "organizeImports": "off" }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "all"
+    }
+  },
+  "css": {
+    "parser": { "tailwindDirectives": true }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": { "preset": "recommended" }
+  },
+  "overrides": [
+    {
+      "includes": ["src/components/ui/**"],
+      "linter": { "enabled": false }
+    }
+  ]
+}

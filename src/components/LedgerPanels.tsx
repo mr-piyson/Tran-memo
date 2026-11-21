@@ -711,7 +711,7 @@ export function LedgerThread({
     return result;
   }, [entries]);
 
-  // ag-grid needs one row per item: date dividers become compact rows and
+  // One virtual row per item: date dividers become compact rows and
   // every transaction gets exactly one bubble row.
   const rows = useMemo<ThreadRow[]>(
     () =>

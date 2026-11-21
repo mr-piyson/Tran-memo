@@ -112,10 +112,13 @@ function sqliteStore(): Promise<EntryStore> {
           `INSERT INTO ledger_notes (dealer_id, code, label, created_at, updated_at) VALUES ($1, $2, $3, ${now}, ${now})`,
           [dealerId, code, label],
         );
-        const [note] = await db.select<LedgerNote[]>(
-          "SELECT id, dealer_id, code, label, created_at, updated_at FROM ledger_notes WHERE id = $1",
-          [Number(result.lastInsertId)],
-        );
+        const note = (
+          await db.select<LedgerNote[]>(
+            "SELECT id, dealer_id, code, label, created_at, updated_at FROM ledger_notes WHERE id = $1",
+            [Number(result.lastInsertId)],
+          )
+        ).at(0);
+        if (!note) throw new Error(`Ledger note ${result.lastInsertId} missing after insert`);
         return note;
       };
 
@@ -132,10 +135,13 @@ function sqliteStore(): Promise<EntryStore> {
           );
           const id = Number(result.lastInsertId);
           await insertLedgerNote(id, null);
-          const [dealer] = await db.select<Dealer[]>(
-            "SELECT id, name, phone, email, emoji, created_at, updated_at FROM dealers WHERE id = $1",
-            [id],
-          );
+          const dealer = (
+            await db.select<Dealer[]>(
+              "SELECT id, name, phone, email, emoji, created_at, updated_at FROM dealers WHERE id = $1",
+              [id],
+            )
+          ).at(0);
+          if (!dealer) throw new Error(`Dealer ${id} missing after insert`);
           return dealer;
         },
 
