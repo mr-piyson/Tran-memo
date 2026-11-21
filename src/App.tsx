@@ -1,644 +1,307 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type FormEvent,
-} from "react";
-import AppSidebar from "./components/AppSidebar";
-import EmojiPicker from "./components/EmojiPicker";
+import { useEffect, useMemo, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useLocation, useNavigate, useParams, useRouter } from "@tanstack/react-router";
+import AppSidebar from "@/components/AppSidebar";
+import ConfirmDialog from "@/components/dialogs/ConfirmDialog";
+import DealerDialog from "@/components/dialogs/DealerDialog";
+import NoteDialog from "@/components/dialogs/NoteDialog";
+import SettingsDialog from "@/components/dialogs/SettingsDialog";
 import {
   DealerDetailPanel,
   DealersPanel,
   LedgerNotesPanel,
   LedgerThread,
-} from "./components/LedgerPanels";
+} from "@/components/LedgerPanels";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import {
-  CURRENCIES,
-  getCurrency,
-  getStore,
-  isTauri,
-  setCurrency,
-  type Currency,
-  type Dealer,
-  type Entry,
-  type EntryKind,
-  type LedgerNote,
-} from "./lib/entries";
+  useAddEntry,
+  useDealers,
+  useDeleteDealer,
+  useDeleteLedgerNote,
+  useLedgerNotes,
+  useRemoveEntry,
+  useSummaries,
+  useThreadEntries,
+} from "@/hooks/use-ledger";
+import { isTauri, type Dealer, type EntryKind, type LedgerNote } from "@/lib/entries";
+import { useUIStore } from "@/store/ui";
 
-const DEFAULT_EMOJI = "💬";
-const currencyItems = CURRENCIES.map((code) => ({ label: code, value: code }));
-type MobilePane = "dealers" | "notes" | "thread";
+const errorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
+
+/** Android's hardware back button pops dialogs, then the route stack. */
+function useAndroidBack(pathname: string) {
+  const router = useRouter();
+  useEffect(() => {
+    if (!isTauri()) return;
+    let cancelled = false;
+    let listener: { unregister(): Promise<void> } | undefined;
+    void import("@tauri-apps/api/app")
+      .then(({ onBackButtonPress, exit }) =>
+        onBackButtonPress(() => {
+          const state = useUIStore.getState();
+          if (state.dialog) return state.closeDialog();
+          if (state.confirm) return state.closeConfirm();
+          if (pathname !== "/") return router.history.back();
+          void exit(0);
+        }),
+      )
+      .then((handle) => {
+        if (cancelled) void handle.unregister();
+        else listener = handle;
+      });
+    return () => {
+      cancelled = true;
+      void listener?.unregister();
+    };
+  }, [router, pathname]);
+}
 
 export default function App() {
-  const [dealers, setDealers] = useState<Dealer[]>([]);
-  const [ledgerNotes, setLedgerNotes] = useState<LedgerNote[]>([]);
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [selectedDealerId, setSelectedDealerId] = useState<number | null>(null);
-  const [selectedNoteId, setSelectedNoteId] = useState<number | null>(null);
-  const [mobilePane, setMobilePane] = useState<MobilePane>("dealers");
-  const [currency, setCurrencyState] = useState<Currency>(getCurrency);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [showSettings, setShowSettings] = useState(false);
-  const [showNewDealer, setShowNewDealer] = useState(false);
-  const [showNewNote, setShowNewNote] = useState(false);
-  const [editingDealer, setEditingDealer] = useState<Dealer | null>(null);
-  const [editingNote, setEditingNote] = useState<LedgerNote | null>(null);
-  const [showDealerDetail, setShowDealerDetail] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newPhone, setNewPhone] = useState("");
-  const [newEmoji, setNewEmoji] = useState(DEFAULT_EMOJI);
-  const [newNoteLabel, setNewNoteLabel] = useState("");
-  const [saving, setSaving] = useState(false);
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const params = useParams({ strict: false }) as { dealerId?: string; noteId?: string };
+  const queryClient = useQueryClient();
 
-  // The reload callback has no dependencies; read the latest selection from a
-  // ref so it never triggers an effect loop.
-  const selectionRef = useRef<{ dealerId: number | null; noteId: number | null }>({
-    dealerId: null,
-    noteId: null,
-  });
-  selectionRef.current = { dealerId: selectedDealerId, noteId: selectedNoteId };
+  const dealerId = params.dealerId ? Number(params.dealerId) : null;
+  const explicitNoteId = params.noteId ? Number(params.noteId) : null;
+  const isDetail = pathname.endsWith("/detail");
 
-  const selectedDealer = useMemo(
-    () => dealers.find((dealer) => dealer.id === selectedDealerId) ?? null,
-    [dealers, selectedDealerId],
-  );
-  const dealerNotes = useMemo(
-    () => ledgerNotes.filter((note) => note.dealer_id === selectedDealerId),
-    [ledgerNotes, selectedDealerId],
-  );
-  const selectedNote = useMemo(
-    () => ledgerNotes.find((note) => note.id === selectedNoteId) ?? null,
-    [ledgerNotes, selectedNoteId],
-  );
-  const threadEntries = useMemo(
-    () =>
-      selectedNote === null
-        ? []
-        : entries.filter((entry) => entry.ledger_note_id === selectedNote.id),
-    [entries, selectedNote],
+  const currency = useUIStore((state) => state.currency);
+  const error = useUIStore((state) => state.error);
+  const setError = useUIStore((state) => state.setError);
+  const openDialog = useUIStore((state) => state.openDialog);
+  const requestConfirm = useUIStore((state) => state.requestConfirm);
+  const rememberSelection = useUIStore((state) => state.rememberSelection);
+
+  const dealersQuery = useDealers();
+  const summariesQuery = useSummaries();
+  const notesQuery = useLedgerNotes(dealerId);
+  const threadQuery = useThreadEntries(
+    dealerId === null ? null : (explicitNoteId ?? notesQuery.data?.[0]?.id ?? null),
   );
 
-  const reload = useCallback(async () => {
-    const store = await getStore();
-    const allDealers = await store.listDealers();
-    const noteLists = await Promise.all(
-      allDealers.map((dealer) => store.listLedgerNotes(dealer.id)),
-    );
-    const allNotes = noteLists.flat();
-    const entryLists = await Promise.all(
-      allNotes.map((note) => store.listEntries(note.id)),
-    );
-    setDealers(allDealers);
-    setLedgerNotes(allNotes);
-    setEntries(entryLists.flat());
+  const dealers = dealersQuery.data ?? [];
+  const notes = dealerId === null ? [] : (notesQuery.data ?? []);
+  const noteSummaries = summariesQuery.data ?? [];
+  const selectedDealer = dealers.find((dealer) => dealer.id === dealerId) ?? null;
+  const selectedNoteId = explicitNoteId ?? notes[0]?.id ?? null;
+  const selectedNote = notes.find((note) => note.id === selectedNoteId) ?? null;
 
-    const { dealerId, noteId } = selectionRef.current;
-    const nextDealerId =
-      dealerId !== null && allDealers.some((dealer) => dealer.id === dealerId)
-        ? dealerId
-        : (allDealers[0]?.id ?? null);
-    const notesForDealer = allNotes.filter((note) => note.dealer_id === nextDealerId);
-    const nextNoteId =
-      noteId !== null && notesForDealer.some((note) => note.id === noteId)
-        ? noteId
-        : (notesForDealer[0]?.id ?? null);
-    setSelectedDealerId(nextDealerId);
-    setSelectedNoteId(nextNoteId);
-  }, []);
+  const dealerSummaries = useMemo(
+    () => noteSummaries.filter((summary) => summary.dealerId === dealerId),
+    [noteSummaries, dealerId],
+  );
+  const notesTotal = dealerSummaries.reduce((sum, summary) => sum + summary.income - summary.expense, 0);
+  const noteSummary = noteSummaries.find((summary) => summary.ledgerNoteId === selectedNoteId);
+  const threadTotals = {
+    income: noteSummary?.income ?? 0,
+    expense: noteSummary?.expense ?? 0,
+    balance: (noteSummary?.income ?? 0) - (noteSummary?.expense ?? 0),
+  };
+
+  const mobilePane = isDetail
+    ? "detail"
+    : explicitNoteId !== null
+      ? "thread"
+      : dealerId !== null
+        ? "notes"
+        : "dealers";
+
+  useAndroidBack(pathname);
+
+  // Restore the last opened dealer once the list is available.
+  const restored = useRef(false);
+  useEffect(() => {
+    if (restored.current || !dealersQuery.data) return;
+    restored.current = true;
+    const last = useUIStore.getState().lastSelection;
+    if (dealerId === null && last && dealersQuery.data.some((dealer) => dealer.id === last.dealerId)) {
+      void navigate({ to: "/dealers/$dealerId", params: { dealerId: String(last.dealerId) }, replace: true });
+    }
+  }, [dealersQuery.data, dealerId, navigate]);
 
   useEffect(() => {
-    reload()
-      .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)))
-      .finally(() => setLoading(false));
-  }, [reload]);
+    if (dealerId !== null) rememberSelection({ dealerId, noteId: selectedNoteId });
+  }, [dealerId, selectedNoteId, rememberSelection]);
 
-  function selectDealer(id: number) {
-    setSelectedDealerId(id);
-    setSelectedNoteId(ledgerNotes.find((note) => note.dealer_id === id)?.id ?? null);
-    setMobilePane(showDealerDetail ? "dealers" : "notes");
-  }
+  const deleteDealerMutation = useDeleteDealer();
+  const deleteNoteMutation = useDeleteLedgerNote(dealerId ?? -1, selectedNoteId ?? -1);
+  const addEntryMutation = useAddEntry(selectedNoteId ?? -1);
+  const removeEntryMutation = useRemoveEntry(selectedNoteId ?? -1);
 
-  function selectNote(id: number) {
-    setSelectedNoteId(id);
-    setMobilePane("thread");
-  }
-
-  async function addEntry(kind: EntryKind, amount: number, description: string) {
-    if (selectedNoteId === null) return;
-    const store = await getStore();
-    await store.addEntry({
-      ledgerNoteId: selectedNoteId,
-      kind,
-      amountCents: amount,
-      description,
+  function requestDeleteDealer(target?: Dealer) {
+    const dealer = target ?? selectedDealer;
+    if (!dealer) return;
+    requestConfirm({
+      title: `Delete ${dealer.name}?`,
+      description: "All ledger notes and transactions for this dealer will be removed.",
+      onConfirm: async () => {
+        try {
+          await deleteDealerMutation.mutateAsync(dealer.id);
+          if (dealerId === dealer.id) void navigate({ to: "/" });
+        } catch (cause) {
+          setError(errorMessage(cause));
+        }
+      },
     });
-    await reload();
   }
 
-  async function removeEntry(id: number) {
-    const store = await getStore();
-    await store.removeEntry(id);
-    await reload();
-  }
-
-  async function deleteDealer(dealer?: Dealer) {
-    const target = dealer ?? selectedDealer;
-    if (!target || !window.confirm(`Delete "${target.name}" and all its ledger notes?`)) return;
-    try {
-      const store = await getStore();
-      await store.deleteDealer(target.id);
-      if (editingDealer?.id === target.id) setEditingDealer(null);
-      if (selectedDealerId === target.id) setShowDealerDetail(false);
-      setMobilePane("dealers");
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }
-
-  function openEditDealer(dealer: Dealer) {
-    setEditingDealer(dealer);
-    setNewName(dealer.name);
-    setNewPhone(dealer.phone ?? "");
-    setNewEmoji(dealer.emoji || DEFAULT_EMOJI);
-  }
-
-  function openDealerDetail(dealer: Dealer) {
-    setSelectedDealerId(dealer.id);
-    setSelectedNoteId(ledgerNotes.find((note) => note.dealer_id === dealer.id)?.id ?? null);
-    setShowDealerDetail(true);
-    setMobilePane("dealers");
-  }
-
-  async function saveDealer(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!editingDealer) return;
-    const name = newName.trim();
-    if (!name || saving) return;
-    setSaving(true);
-    setError("");
-    try {
-      const store = await getStore();
-      await store.updateDealer(editingDealer.id, {
-        name,
-        phone: newPhone.trim(),
-        emoji: newEmoji,
-      });
-      await reload();
-      setEditingDealer(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function deleteNote(note?: LedgerNote) {
-    const target = note ?? selectedNote;
-    if (!target || !window.confirm(`Delete ${target.code} and its transactions?`)) return;
-    try {
-      const store = await getStore();
-      await store.deleteLedgerNote(target.id);
-      if (editingNote?.id === target.id) setEditingNote(null);
-      setMobilePane("notes");
-      await reload();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }
-
-  function openEditNote(note: LedgerNote) {
-    setEditingNote(note);
-    setNewNoteLabel(note.label ?? "");
-  }
-
-  async function saveNote(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!editingNote || saving) return;
-    setSaving(true);
-    setError("");
-    try {
-      const store = await getStore();
-      await store.renameLedgerNote(editingNote.id, newNoteLabel.trim());
-      await reload();
-      setEditingNote(null);
-      setNewNoteLabel("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function createDealer(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const name = newName.trim();
-    if (!name || saving) return;
-    setSaving(true);
-    setError("");
-    try {
-      const store = await getStore();
-      const dealer = await store.createDealer({ name, phone: newPhone.trim(), emoji: newEmoji });
-      selectionRef.current = { dealerId: dealer.id, noteId: null };
-      await reload();
-      setMobilePane("notes");
-      setNewName("");
-      setNewPhone("");
-      setNewEmoji(DEFAULT_EMOJI);
-      setShowNewDealer(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function createNote(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (selectedDealerId === null || saving) return;
-    setSaving(true);
-    setError("");
-    try {
-      const store = await getStore();
-      const note = await store.createLedgerNote({
-        dealerId: selectedDealerId,
-        label: newNoteLabel.trim() || null,
-      });
-      selectionRef.current = { dealerId: selectedDealerId, noteId: note.id };
-      await reload();
-      setMobilePane("thread");
-      setNewNoteLabel("");
-      setShowNewNote(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function changeCurrency(next: Currency) {
-    setCurrencyState(next);
-    setCurrency(next);
+  function requestDeleteNote(target?: LedgerNote) {
+    const note = target ?? selectedNote;
+    if (!note || dealerId === null) return;
+    requestConfirm({
+      title: `Delete ${note.code}?`,
+      description: "This ledger note and all its transactions will be removed.",
+      onConfirm: async () => {
+        try {
+          await deleteNoteMutation.mutateAsync();
+          void navigate({ to: "/dealers/$dealerId", params: { dealerId: String(dealerId) } });
+        } catch (cause) {
+          setError(errorMessage(cause));
+        }
+      },
+    });
   }
 
   function clearBrowserData() {
-    if (!window.confirm("Clear all browser-preview dealers, ledger notes and transactions?")) return;
-    localStorage.removeItem("ledger-notes:v4");
-    localStorage.removeItem("ledger-notes:v3");
-    localStorage.removeItem("ledger-notes:v2");
-    localStorage.removeItem("ledger-notes:entries");
-    selectionRef.current = { dealerId: null, noteId: null };
-    setSelectedDealerId(null);
-    setSelectedNoteId(null);
-    setMobilePane("dealers");
-    reload().catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
+    requestConfirm({
+      title: "Clear browser preview data?",
+      description: "All dealers, ledger notes and transactions in this browser will be deleted.",
+      confirmLabel: "Clear data",
+      onConfirm: async () => {
+        for (const key of [
+          "ledger-notes:v4",
+          "ledger-notes:v3",
+          "ledger-notes:v2",
+          "ledger-notes:entries",
+        ]) {
+          localStorage.removeItem(key);
+        }
+        useUIStore.setState({ lastSelection: null });
+        queryClient.clear();
+        void navigate({ to: "/", replace: true });
+      },
+    });
   }
+
+  const displayedError =
+    error ??
+    [dealersQuery.error, summariesQuery.error, notesQuery.error, threadQuery.error]
+      .find((queryError) => queryError !== null)
+      ?.message ??
+    null;
 
   return (
     <TooltipProvider>
       <SidebarProvider defaultOpen={false}>
         <div className="flex h-dvh w-full overflow-hidden bg-background text-foreground">
           <AppSidebar
-            onDealers={() => setMobilePane("dealers")}
-            onNewDealer={() => setShowNewDealer(true)}
-            onNewNote={() => setShowNewNote(true)}
-            onSettings={() => setShowSettings(true)}
+            onDealers={() => void navigate({ to: "/" })}
+            onNewDealer={() => openDialog("newDealer")}
+            onNewNote={() => openDialog("newNote", dealerId)}
+            onSettings={() => openDialog("settings")}
           />
 
           <SidebarInset className="min-w-0">
             <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
               <DealersPanel
                 dealers={dealers}
-                ledgerNotes={ledgerNotes}
-                entries={entries}
-                selectedId={selectedDealerId}
+                summaries={noteSummaries}
+                selectedId={dealerId}
                 currency={currency}
-                active={mobilePane === "dealers" && !showDealerDetail}
-                desktopActive={mobilePane === "dealers"}
-                onSelect={selectDealer}
-                onNewDealer={() => setShowNewDealer(true)}
-                onEditDealer={openEditDealer}
-                onDeleteDealer={deleteDealer}
-                onDetailDealer={openDealerDetail}
+                active={mobilePane === "dealers"}
+                desktopActive={!isDetail && dealerId === null}
+                onSelect={(id) =>
+                  void navigate({ to: "/dealers/$dealerId", params: { dealerId: String(id) } })
+                }
+                onNewDealer={() => openDialog("newDealer")}
+                onEditDealer={(dealer) => openDialog("editDealer", dealer.id)}
+                onDeleteDealer={requestDeleteDealer}
+                onDetailDealer={(dealer) =>
+                  void navigate({
+                    to: "/dealers/$dealerId/detail",
+                    params: { dealerId: String(dealer.id) },
+                  })
+                }
               />
               <LedgerNotesPanel
                 dealer={selectedDealer}
-                notes={dealerNotes}
-                entries={entries.filter((entry) =>
-                  dealerNotes.some((note) => note.id === entry.ledger_note_id),
-                )}
+                notes={notes}
+                summaries={dealerSummaries}
+                total={notesTotal}
                 selectedId={selectedNoteId}
                 currency={currency}
-                active={mobilePane === "notes" && !showDealerDetail}
-                desktopActive={mobilePane !== "dealers"}
-                onBack={() => setMobilePane("dealers")}
-                onSelect={selectNote}
-                onNewNote={() => setShowNewNote(true)}
-                onEditNote={openEditNote}
-                onDeleteNote={deleteNote}
-                onDeleteDealer={() => deleteDealer()}
+                active={mobilePane === "notes"}
+                desktopActive={!isDetail && dealerId !== null}
+                onBack={() => void navigate({ to: "/" })}
+                onSelect={(id) =>
+                  void navigate({
+                    to: "/dealers/$dealerId/notes/$noteId",
+                    params: { dealerId: String(dealerId), noteId: String(id) },
+                  })
+                }
+                onNewNote={() => openDialog("newNote", dealerId)}
+                onEditNote={(note) => openDialog("editNote", note.id)}
+                onDeleteNote={requestDeleteNote}
+                onDeleteDealer={() => requestDeleteDealer()}
               />
               <LedgerThread
                 dealer={selectedDealer}
                 note={selectedNote}
-                entries={threadEntries}
+                pages={threadQuery.data?.pages ?? []}
+                totals={threadTotals}
                 currency={currency}
-                active={mobilePane === "thread" && !showDealerDetail}
-                loading={loading}
-                onBack={() => setMobilePane("notes")}
-                onDeleteNote={() => deleteNote()}
-                onAddEntry={addEntry}
-                onRemoveEntry={removeEntry}
+                active={mobilePane === "thread"}
+                isLoading={threadQuery.isLoading}
+                isFetchingNextPage={threadQuery.isFetchingNextPage}
+                hasNextPage={threadQuery.hasNextPage}
+                onLoadOlder={() => void threadQuery.fetchNextPage()}
+                onBack={() =>
+                  void navigate({ to: "/dealers/$dealerId", params: { dealerId: String(dealerId) } })
+                }
+                onDeleteNote={() => requestDeleteNote()}
+                onAddEntry={async (kind: EntryKind, amount: number, description: string) => {
+                  if (selectedNoteId === null) return;
+                  await addEntryMutation.mutateAsync({ kind, amountCents: amount, description });
+                }}
+                onRemoveEntry={async (id: number) => {
+                  await removeEntryMutation.mutateAsync(id);
+                }}
               />
-              {showDealerDetail && (
+              {isDetail && (
                 <DealerDetailPanel
                   dealer={selectedDealer}
-                  entries={entries.filter((entry) =>
-                    dealerNotes.some((note) => note.id === entry.ledger_note_id),
-                  )}
+                  total={notesTotal}
                   currency={currency}
-                  active={showDealerDetail}
-                  desktopActive={showDealerDetail}
-                  onClose={() => setShowDealerDetail(false)}
-                  onDeleteDealer={deleteDealer}
+                  active
+                  desktopActive
+                  onClose={() =>
+                    void navigate({
+                      to: "/dealers/$dealerId",
+                      params: { dealerId: String(dealerId) },
+                    })
+                  }
+                  onDeleteDealer={requestDeleteDealer}
                 />
               )}
             </div>
 
-            {error && (
+            {displayedError && (
               <Alert
                 variant="destructive"
                 className="fixed bottom-20 left-1/2 z-50 w-auto -translate-x-1/2 shadow-lg md:bottom-6"
               >
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription>{displayedError}</AlertDescription>
               </Alert>
             )}
 
-            <Dialog open={showSettings} onOpenChange={setShowSettings}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Settings</DialogTitle>
-                  <DialogDescription>
-                    Choose how amounts are displayed and where your data lives.
-                  </DialogDescription>
-                </DialogHeader>
-                <FieldGroup>
-                  <Field>
-                    <FieldLabel htmlFor="currency">Currency</FieldLabel>
-                    <Select
-                      items={currencyItems}
-                      value={currency}
-                      onValueChange={(value) => changeCurrency(value as Currency)}
-                    >
-                      <SelectTrigger id="currency" className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent align="start">
-                        <SelectGroup>
-                          {CURRENCIES.map((option) => (
-                            <SelectItem key={option} value={option}>
-                              {option}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </Field>
-                </FieldGroup>
-                <Card size="sm">
-                  <CardHeader>
-                    <CardTitle>Storage</CardTitle>
-                    <CardDescription>
-                      {isTauri()
-                        ? "Dealers and transactions are saved in a local SQLite database. Amounts are stored in BHD fils (3 decimals)."
-                        : "Browser preview mode uses localStorage. Amounts are stored in BHD fils (3 decimals)."}
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-                {!isTauri() && (
-                  <Button variant="destructive" onClick={clearBrowserData}>
-                    Clear browser preview data
-                  </Button>
-                )}
-                <DialogFooter>
-                  <DialogClose render={<Button variant="outline" />}>Done</DialogClose>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={showNewDealer} onOpenChange={setShowNewDealer}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>New dealer</DialogTitle>
-                  <DialogDescription>
-                    Each dealer starts with ledger note IN-00001 for income and expenses.
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={createDealer} className="flex flex-col gap-4">
-                  <FieldGroup>
-                    <Field>
-                      <FieldLabel htmlFor="dealer-name">Dealer name</FieldLabel>
-                      <Input
-                        id="dealer-name"
-                        type="text"
-                        required
-                        maxLength={60}
-                        autoFocus
-                        placeholder="e.g. Muntadher"
-                        value={newName}
-                        onChange={(event) => setNewName(event.target.value)}
-                      />
-                    </Field>
-                    <Field>
-                      <FieldLabel htmlFor="dealer-phone">Phone (optional)</FieldLabel>
-                      <Input
-                        id="dealer-phone"
-                        type="tel"
-                        maxLength={30}
-                        placeholder="+973 36860504"
-                        value={newPhone}
-                        onChange={(event) => setNewPhone(event.target.value)}
-                      />
-                    </Field>
-                    <Field>
-                      <FieldLabel>Avatar</FieldLabel>
-                      <EmojiPicker value={newEmoji} onChange={setNewEmoji} />
-                    </Field>
-                  </FieldGroup>
-                  <DialogFooter>
-                    <DialogClose render={<Button variant="outline" type="button" />}>
-                      Cancel
-                    </DialogClose>
-                    <Button type="submit" disabled={saving}>
-                      Create dealer
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog
-              open={editingDealer !== null}
-              onOpenChange={(open) => {
-                if (!open) setEditingDealer(null);
-              }}
-            >
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Edit dealer</DialogTitle>
-                  <DialogDescription>Update the dealer name, phone, or avatar.</DialogDescription>
-                </DialogHeader>
-                <form onSubmit={saveDealer} className="flex flex-col gap-4">
-                  <FieldGroup>
-                    <Field>
-                      <FieldLabel htmlFor="edit-dealer-name">Dealer name</FieldLabel>
-                      <Input
-                        id="edit-dealer-name"
-                        type="text"
-                        required
-                        maxLength={60}
-                        autoFocus
-                        value={newName}
-                        onChange={(event) => setNewName(event.target.value)}
-                      />
-                    </Field>
-                    <Field>
-                      <FieldLabel htmlFor="edit-dealer-phone">Phone (optional)</FieldLabel>
-                      <Input
-                        id="edit-dealer-phone"
-                        type="tel"
-                        maxLength={30}
-                        placeholder="+973 36860504"
-                        value={newPhone}
-                        onChange={(event) => setNewPhone(event.target.value)}
-                      />
-                    </Field>
-                    <Field>
-                      <FieldLabel>Avatar</FieldLabel>
-                      <EmojiPicker value={newEmoji} onChange={setNewEmoji} />
-                    </Field>
-                  </FieldGroup>
-                  <DialogFooter>
-                    <DialogClose render={<Button variant="outline" type="button" />}>
-                      Cancel
-                    </DialogClose>
-                    <Button type="submit" disabled={saving || !editingDealer}>
-                      Save changes
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog open={showNewNote} onOpenChange={setShowNewNote}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>New ledger note</DialogTitle>
-                  <DialogDescription>
-                    Adds the next global code (for example IN-00002) to {selectedDealer?.name ?? "this dealer"}.
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={createNote} className="flex flex-col gap-4">
-                  <FieldGroup>
-                    <Field>
-                      <FieldLabel htmlFor="note-label">Label (optional)</FieldLabel>
-                      <Input
-                        id="note-label"
-                        type="text"
-                        maxLength={60}
-                        autoFocus
-                        placeholder="e.g. July 2026"
-                        value={newNoteLabel}
-                        onChange={(event) => setNewNoteLabel(event.target.value)}
-                      />
-                    </Field>
-                  </FieldGroup>
-                  <DialogFooter>
-                    <DialogClose render={<Button variant="outline" type="button" />}>
-                      Cancel
-                    </DialogClose>
-                    <Button type="submit" disabled={saving || selectedDealerId === null}>
-                      Create ledger note
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-
-            <Dialog
-              open={editingNote !== null}
-              onOpenChange={(open) => {
-                if (!open) {
-                  setEditingNote(null);
-                  setNewNoteLabel("");
-                }
-              }}
-            >
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Edit ledger note</DialogTitle>
-                  <DialogDescription>
-                    Update the label for {editingNote?.code ?? "this ledger note"}.
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={saveNote} className="flex flex-col gap-4">
-                  <FieldGroup>
-                    <Field>
-                      <FieldLabel htmlFor="edit-note-label">Label (optional)</FieldLabel>
-                      <Input
-                        id="edit-note-label"
-                        type="text"
-                        maxLength={60}
-                        autoFocus
-                        placeholder="e.g. July 2026"
-                        value={newNoteLabel}
-                        onChange={(event) => setNewNoteLabel(event.target.value)}
-                      />
-                    </Field>
-                  </FieldGroup>
-                  <DialogFooter>
-                    <DialogClose render={<Button variant="outline" type="button" />}>
-                      Cancel
-                    </DialogClose>
-                    <Button type="submit" disabled={saving || !editingNote}>
-                      Save changes
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+            <DealerDialog />
+            <NoteDialog dealerId={dealerId} />
+            <SettingsDialog onClearData={clearBrowserData} />
+            <ConfirmDialog />
           </SidebarInset>
         </div>
       </SidebarProvider>

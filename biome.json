@@ -3,13 +3,13 @@
   "files": {
     "includes": [
       "**",
-      "!dist/**",
-      "!graphify-out/**",
-      "!node_modules/**",
-      "!src-tauri/target/**",
-      "!src-tauri/gen/**",
-      "!.releases/**",
-      "!.cargo/**"
+      "!dist",
+      "!graphify-out",
+      "!node_modules",
+      "!src-tauri/target",
+      "!src-tauri/gen",
+      "!.releases",
+      "!.cargo"
     ]
   },
   "formatter": {

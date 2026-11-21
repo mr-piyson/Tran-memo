@@ -14,16 +14,21 @@ Each dealer has ledger notes (`IN-00001`, `IN-00002`, …); each note is a conve
 | Styling | Tailwind CSS 4 (`@tailwindcss/vite`) |
 | Language | TypeScript 7 |
 | Storage | `@tauri-apps/plugin-sql` with SQLite, migrations in `src-tauri/src/lib.rs` |
+| Async data | TanStack Query — scoped queries, keyed invalidation, optimistic writes |
+| UI state | Zustand — dialogs, currency, confirmations, last selection |
+| Navigation | TanStack Router with memory history (route depth = mobile back stack) |
 | Lists | `@tanstack/react-virtual` (virtualized single-column rows) |
+| Tests | Vitest (`pnpm test`) |
 
 ## Features
 
 - Desktop three-pane layout: tools rail, dealer list, ledger-note list, chat timeline
-- Mobile stacked views: dealers → notes → chat, with back buttons and tools rail
+- Mobile stacked views: dealers → notes → chat, with back buttons, tools rail, and Android hardware-back support
 - Create/delete dealers and ledger notes with emoji avatars, search, and phone numbers
 - Add income/expense "messages" with amount + description, per-note totals, delete entries
 - Currency selector in Settings; per-note and overall summaries
-- SQLite in Tauri; `localStorage` fallback for browser UI development
+- SQLite in Tauri (WAL mode); `localStorage` fallback for browser UI development
+- Summaries aggregated in SQL, threads loaded in pages of 100 with optimistic add/delete
 
 ## Prerequisites
 
@@ -139,6 +144,7 @@ pnpm typecheck   # TypeScript check
 pnpm lint        # Biome lint (first-party code)
 pnpm knip        # Unused files / deps / exports
 pnpm sg:check    # Structural lint rules (e.g. no ag-grid imports)
+pnpm test        # Vitest unit / store-contract tests
 pnpm build       # Frontend production build
 pnpm size        # Bundle size budget (250 kB brotli)
 pnpm check       # All of the above in one command
@@ -149,9 +155,19 @@ The SQLite file (`ledger.db`) lives in the platform app-data directory. The sche
 
 Change the currency from the Settings modal (sidebar on desktop / tools rail on mobile). The default is `BHD`, displayed with 3 decimals; supported currencies are listed in `CURRENCIES` in `src/lib/entries.ts`.
 
+## Architecture
+
+`src/lib/entries.ts` is the only data boundary (`EntryStore`). SQLite implements it in Tauri; a browser implementation backs local development and tests. TanStack Query owns all async data with keys in `src/lib/query-keys.ts`, so a mutation invalidates only the affected dealer/note/thread queries instead of reloading the database. Zustand holds only ephemeral UI state — SQLite remains the single source of truth for data.
+
+Routes (`/`, `/dealers/$dealerId`, `/dealers/$dealerId/notes/$noteId`, `/dealers/$dealerId/detail`) drive pane selection and the mobile back stack; `App.tsx` stays mounted and renders all panes. Note summaries come from one indexed `GROUP BY` query; threads are keyset-paginated newest-first and rendered oldest-first.
+
 ## Main source files
 
-- `src/App.tsx` — app state, data loading, settings, new-dealer/new-note dialogs
+- `src/App.tsx` — composition, route-driven selection, mutation handlers
+- `src/lib/router.ts` — route tree, memory history, typed navigation
+- `src/hooks/use-ledger.ts` — query and mutation hooks (invalidation, optimistic updates)
+- `src/store/ui.ts` — Zustand UI state (dialogs, currency, confirmations, last selection)
+- `src/components/dialogs/` — dealer, note, settings, and confirm dialogs
 - `src/components/AppSidebar.tsx` — tools rail
 - `src/components/ListGrid.tsx` — shared virtualized list (TanStack Virtual)
 - `src/components/LedgerPanels.tsx` — dealer list, ledger-note list, transaction thread and composer

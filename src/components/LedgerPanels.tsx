@@ -1,4 +1,11 @@
-import { useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import {
   ArchiveXIcon,
   ArrowLeftIcon,
@@ -35,32 +42,44 @@ import {
   type Dealer,
   type Entry,
   type EntryKind,
+  type EntryPage,
   type LedgerNote,
+  type NoteSummary,
 } from "@/lib/entries";
-
-interface Summary {
-  total: number;
-  count: number;
-  last?: Entry;
-}
 
 type ThreadRow =
   | { kind: "divider"; id: string; label: string }
   | { kind: "entry"; id: string; entry: Entry };
 
-function summarize(entries: Entry[]): Map<number, Summary> {
-  const result = new Map<number, Summary>();
-  for (const entry of entries) {
-    const key = "ledger_note_id" in entry ? entry.ledger_note_id : -1;
-    const summary = result.get(key) ?? { total: 0, count: 0 };
-    summary.total += entry.kind === "income" ? entry.amount_cents : -entry.amount_cents;
-    summary.count += 1;
-    if (!summary.last || entry.created_at > summary.last.created_at) {
-      summary.last = entry;
+interface DealerSummary {
+  total: number;
+  count: number;
+  lastCreatedAt: string | null;
+}
+
+/** Roll note-level SQL aggregates up to dealers without touching raw entries. */
+function summarizeByDealer(summaries: NoteSummary[]): Map<number, DealerSummary> {
+  const result = new Map<number, DealerSummary>();
+  for (const note of summaries) {
+    const current = result.get(note.dealerId) ?? { total: 0, count: 0, lastCreatedAt: null };
+    current.total += note.income - note.expense;
+    current.count += note.count;
+    if (note.lastCreatedAt && (!current.lastCreatedAt || note.lastCreatedAt > current.lastCreatedAt)) {
+      current.lastCreatedAt = note.lastCreatedAt;
     }
-    result.set(key, summary);
+    result.set(note.dealerId, current);
   }
   return result;
+}
+
+/** Keeps typing responsive even with a large dealer list. */
+function useDebounced<T>(value: T, delay = 150): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebounced(value), delay);
+    return () => window.clearTimeout(timer);
+  }, [value, delay]);
+  return debounced;
 }
 
 export function isDefaultAvatar(emoji: string | null | undefined): boolean {
@@ -145,8 +164,7 @@ const fabClass =
 
 export function DealersPanel({
   dealers,
-  ledgerNotes,
-  entries,
+  summaries: noteSummaries,
   selectedId,
   currency,
   active,
@@ -158,8 +176,7 @@ export function DealersPanel({
   onDetailDealer,
 }: {
   dealers: Dealer[];
-  ledgerNotes: LedgerNote[];
-  entries: Entry[];
+  summaries: NoteSummary[];
   selectedId: number | null;
   currency: Currency;
   active: boolean;
@@ -171,33 +188,16 @@ export function DealersPanel({
   onDetailDealer: (dealer: Dealer) => void;
 }) {
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounced(search);
 
   const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const query = debouncedSearch.trim().toLowerCase();
     return query
       ? dealers.filter((dealer) => dealer.name.toLowerCase().includes(query))
       : dealers;
-  }, [dealers, search]);
+  }, [dealers, debouncedSearch]);
 
-  const summaries = useMemo(() => {
-    const dealerByNote = new Map(ledgerNotes.map((note) => [note.id, note.dealer_id]));
-    const result = new Map<number, Summary>();
-    for (const [noteId, noteSummary] of summarize(entries)) {
-      const dealerId = dealerByNote.get(noteId);
-      if (dealerId === undefined) continue;
-      const current = result.get(dealerId) ?? { total: 0, count: 0 };
-      current.total += noteSummary.total;
-      current.count += noteSummary.count;
-      if (
-        noteSummary.last &&
-        (!current.last || noteSummary.last.created_at > current.last.created_at)
-      ) {
-        current.last = noteSummary.last;
-      }
-      result.set(dealerId, current);
-    }
-    return result;
-  }, [entries, ledgerNotes]);
+  const summaries = useMemo(() => summarizeByDealer(noteSummaries), [noteSummaries]);
 
   return (
     <section
@@ -267,9 +267,9 @@ export function DealersPanel({
                         <span className="truncate text-[15px]" title={dealer.name}>
                           {dealer.name}
                         </span>
-                        {summary?.last && (
+                        {summary?.lastCreatedAt && (
                           <span className={cn(rowMetaClass, "shrink-0")}>
-                            {formatListDate(summary.last.created_at)}
+                            {formatListDate(summary.lastCreatedAt)}
                           </span>
                         )}
                       </span>
@@ -330,7 +330,7 @@ export function DealersPanel({
 
 export function DealerDetailPanel({
   dealer,
-  entries,
+  total,
   currency,
   active,
   desktopActive,
@@ -338,21 +338,13 @@ export function DealerDetailPanel({
   onDeleteDealer,
 }: {
   dealer: Dealer | null;
-  entries: Entry[];
+  total: number;
   currency: Currency;
   active: boolean;
   desktopActive: boolean;
   onClose: () => void;
   onDeleteDealer: (dealer: Dealer) => void;
 }) {
-  const total = useMemo(
-    () =>
-      entries.reduce(
-        (sum, entry) => sum + (entry.kind === "income" ? entry.amount_cents : -entry.amount_cents),
-        0,
-      ),
-    [entries],
-  );
   const createdDate = dealer
     ? new Date(dealer.created_at)
         .toLocaleDateString("en-GB", {
@@ -490,7 +482,8 @@ function DetailRow({
 export function LedgerNotesPanel({
   dealer,
   notes,
-  entries,
+  summaries: noteSummaries,
+  total,
   selectedId,
   currency,
   active,
@@ -504,7 +497,8 @@ export function LedgerNotesPanel({
 }: {
   dealer: Dealer | null;
   notes: LedgerNote[];
-  entries: Entry[];
+  summaries: NoteSummary[];
+  total: number;
   selectedId: number | null;
   currency: Currency;
   active: boolean;
@@ -516,13 +510,10 @@ export function LedgerNotesPanel({
   onDeleteNote: (note: LedgerNote) => void;
   onDeleteDealer: () => void;
 }) {
-  const summaries = useMemo(() => summarize(entries), [entries]);
-  const total = dealer
-    ? entries.reduce(
-        (sum, entry) => sum + (entry.kind === "income" ? entry.amount_cents : -entry.amount_cents),
-        0,
-      )
-    : 0;
+  const summaries = useMemo(
+    () => new Map(noteSummaries.map((summary) => [summary.ledgerNoteId, summary])),
+    [noteSummaries],
+  );
 
   return (
     <section
@@ -571,7 +562,7 @@ export function LedgerNotesPanel({
             rowHeight={88}
             renderRow={(note) => {
               const summary = summaries.get(note.id);
-              const noteTotal = summary?.total ?? 0;
+              const noteTotal = summary ? summary.income - summary.expense : 0;
               const tone = noteTotal >= 0 ? "var(--bar-green)" : "var(--bar-red)";
               return (
                 <div
@@ -597,9 +588,9 @@ export function LedgerNotesPanel({
                           <span className="text-lg font-normal tracking-[0.2px] text-amount-blue">
                             {note.code}
                           </span>
-                          {summary?.last && (
+                          {summary?.lastCreatedAt && (
                             <span className={cn(rowMetaClass, "shrink-0")}>
-                              {formatListDate(summary.last.created_at)}
+                              {formatListDate(summary.lastCreatedAt)}
                             </span>
                           )}
                         </span>
@@ -661,10 +652,14 @@ export function LedgerNotesPanel({
 export function LedgerThread({
   dealer,
   note,
-  entries,
+  pages,
+  totals,
   currency,
   active,
-  loading,
+  isLoading,
+  isFetchingNextPage,
+  hasNextPage,
+  onLoadOlder,
   onBack,
   onDeleteNote,
   onAddEntry,
@@ -672,10 +667,14 @@ export function LedgerThread({
 }: {
   dealer: Dealer | null;
   note: LedgerNote | null;
-  entries: Entry[];
+  pages: EntryPage[];
+  totals: { income: number; expense: number; balance: number };
   currency: Currency;
   active: boolean;
-  loading: boolean;
+  isLoading: boolean;
+  isFetchingNextPage: boolean;
+  hasNextPage: boolean;
+  onLoadOlder: () => void;
   onBack: () => void;
   onDeleteNote: () => void;
   onAddEntry: (kind: EntryKind, amount: number, description: string) => Promise<void>;
@@ -687,15 +686,8 @@ export function LedgerThread({
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
 
-  const totals = useMemo(() => {
-    let income = 0;
-    let expense = 0;
-    for (const entry of entries) {
-      if (entry.kind === "income") income += entry.amount_cents;
-      else expense += entry.amount_cents;
-    }
-    return { income, expense, balance: income - expense };
-  }, [entries]);
+  // Pages arrive newest-first; the thread renders oldest → newest.
+  const entries = useMemo(() => pages.flatMap((page) => page.entries).reverse(), [pages]);
 
   const groups = useMemo(() => {
     const result: Array<{ date: string; entries: Entry[] }> = [];
@@ -808,7 +800,20 @@ export function LedgerThread({
         </span>
       </div>
 
-      {!loading && entries.length === 0 ? (
+      {hasNextPage && (
+        <div className="shrink-0 border-b px-3 py-2 text-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onLoadOlder}
+            disabled={isFetchingNextPage}
+          >
+            {isFetchingNextPage ? "Loading…" : "Load older transactions"}
+          </Button>
+        </div>
+      )}
+
+      {!isLoading && entries.length === 0 ? (
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center text-text-faint">
             <ReceiptTextIcon strokeWidth={1} className="size-[90px]" />

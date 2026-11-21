@@ -49,6 +49,22 @@ export interface NewEntry {
   description: string;
 }
 
+/** Aggregates computed in SQL so the UI never scans every entry. */
+export interface NoteSummary {
+  ledgerNoteId: number;
+  dealerId: number;
+  income: number;
+  expense: number;
+  count: number;
+  lastCreatedAt: string | null;
+}
+
+/** One page of a thread, newest first. `nextCursor` is null at the oldest page. */
+export interface EntryPage {
+  entries: Entry[];
+  nextCursor: string | null;
+}
+
 export interface EntryStore {
   listDealers(): Promise<Dealer[]>;
   createDealer(dealer: NewDealer): Promise<Dealer>;
@@ -63,7 +79,11 @@ export interface EntryStore {
   renameLedgerNote(id: number, label: string): Promise<void>;
   deleteLedgerNote(id: number): Promise<void>;
 
+  /** All notes with their totals, in one grouped query. */
+  listSummaries(): Promise<NoteSummary[]>;
   listEntries(ledgerNoteId: number): Promise<Entry[]>;
+  /** Keyset-paginated thread; pages run newest → oldest. */
+  listEntriesPage(ledgerNoteId: number, limit: number, cursor?: string): Promise<EntryPage>;
   addEntry(entry: NewEntry): Promise<void>;
   removeEntry(id: number): Promise<void>;
 }
@@ -97,17 +117,38 @@ export function nextLedgerCode(codes: Iterable<string>): string {
   return `IN-${String(max + 1).padStart(5, "0")}`;
 }
 
+const encodeCursor = (entry: Entry) => `${entry.created_at}|${entry.id}`;
+
+function decodeCursor(cursor: string): { createdAt: string; id: number } | null {
+  const cut = cursor.lastIndexOf("|");
+  if (cut < 1) return null;
+  const id = Number(cursor.slice(cut + 1));
+  return Number.isFinite(id) ? { createdAt: cursor.slice(0, cut), id } : null;
+}
+
 function sqliteStore(): Promise<EntryStore> {
   return import("@tauri-apps/plugin-sql").then(({ default: Database }) =>
-    Database.load(DATABASE_URL).then((db) => {
+    Database.load(DATABASE_URL).then(async (db) => {
+      // WAL keeps writes responsive on mobile. Not every platform/config allows
+      // it, so a failure is non-fatal — the default journal is still correct.
+      try {
+        await db.execute("PRAGMA journal_mode = WAL");
+        await db.execute("PRAGMA synchronous = NORMAL");
+      } catch {
+        // Fall back to the default journal mode.
+      }
+
       const now = "strftime('%Y-%m-%dT%H:%M:%fZ', 'now')";
 
       const insertLedgerNote = async (
         dealerId: number,
         label: string | null,
       ): Promise<LedgerNote> => {
-        const rows = await db.select<{ code: string }[]>("SELECT code FROM ledger_notes");
-        const code = nextLedgerCode(rows.map((row) => row.code));
+        // MAX() uses the UNIQUE index on code — no full-table scan.
+        const rows = await db.select<{ code: string | null }[]>(
+          "SELECT MAX(code) AS code FROM ledger_notes",
+        );
+        const code = nextLedgerCode(rows[0]?.code ? [rows[0].code] : []);
         const result = await db.execute(
           `INSERT INTO ledger_notes (dealer_id, code, label, created_at, updated_at) VALUES ($1, $2, $3, ${now}, ${now})`,
           [dealerId, code, label],
@@ -188,11 +229,69 @@ function sqliteStore(): Promise<EntryStore> {
             .execute("DELETE FROM ledger_notes WHERE id = $1", [id])
             .then(() => undefined),
 
+        listSummaries: () =>
+          db
+            .select<
+              {
+                ledger_note_id: number;
+                dealer_id: number;
+                income: number;
+                expense: number;
+                count: number;
+                last_created_at: string | null;
+              }[]
+            >(
+              `SELECT ln.id AS ledger_note_id, ln.dealer_id,
+                      COALESCE(SUM(CASE WHEN e.kind = 'income' THEN e.amount_cents ELSE 0 END), 0) AS income,
+                      COALESCE(SUM(CASE WHEN e.kind = 'expense' THEN e.amount_cents ELSE 0 END), 0) AS expense,
+                      COUNT(e.id) AS count,
+                      MAX(e.created_at) AS last_created_at
+               FROM ledger_notes ln
+               LEFT JOIN entries e ON e.ledger_note_id = ln.id
+               GROUP BY ln.id, ln.dealer_id`,
+            )
+            .then((rows) =>
+              rows.map((row) => ({
+                ledgerNoteId: row.ledger_note_id,
+                dealerId: row.dealer_id,
+                income: row.income,
+                expense: row.expense,
+                count: row.count,
+                lastCreatedAt: row.last_created_at,
+              })),
+            ),
+
         listEntries: (ledgerNoteId) =>
           db.select<Entry[]>(
             "SELECT id, ledger_note_id, kind, amount_cents, description, created_at FROM entries WHERE ledger_note_id = $1 ORDER BY created_at ASC, id ASC",
             [ledgerNoteId],
           ),
+
+        listEntriesPage: async (ledgerNoteId, limit, cursor) => {
+          const decoded = cursor ? decodeCursor(cursor) : null;
+          const params: unknown[] = [ledgerNoteId];
+          const olderThan = decoded
+            ? "AND (created_at < $2 OR (created_at = $2 AND id < $3))"
+            : "";
+          if (decoded) params.push(decoded.createdAt, decoded.id);
+          params.push(limit + 1);
+
+          const rows = await db.select<Entry[]>(
+            `SELECT id, ledger_note_id, kind, amount_cents, description, created_at
+             FROM entries
+             WHERE ledger_note_id = $1 ${olderThan}
+             ORDER BY created_at DESC, id DESC
+             LIMIT $${params.length}`,
+            params,
+          );
+          const hasMore = rows.length > limit;
+          const entries = hasMore ? rows.slice(0, limit) : rows;
+          const oldest = entries.at(-1);
+          return {
+            entries,
+            nextCursor: hasMore && oldest ? encodeCursor(oldest) : null,
+          };
+        },
 
         addEntry: async ({ ledgerNoteId, kind, amountCents, description }) => {
           await db.execute(
@@ -264,12 +363,12 @@ function migrateV2(v2: BrowserDataV2): BrowserData {
   return {
     dealers,
     ledgerNotes,
-    entries: v2.entries
-      .filter((entry) => noteIdToLedgerId.has(entry.note_id))
-      .map(({ note_id, ...entry }) => ({
-        ...entry,
-        ledger_note_id: noteIdToLedgerId.get(note_id)!,
-      })),
+    entries: v2.entries.flatMap(({ note_id, ...entry }) => {
+      const ledgerNoteId = noteIdToLedgerId.get(note_id);
+      return ledgerNoteId === undefined
+        ? []
+        : [{ ...entry, ledger_note_id: ledgerNoteId }];
+    }),
   };
 }
 
@@ -416,10 +515,58 @@ function browserStore(): EntryStore {
       });
     },
 
+    listSummaries: async () => {
+      const data = read();
+      const byNote = new Map<number, NoteSummary>();
+      for (const note of data.ledgerNotes) {
+        byNote.set(note.id, {
+          ledgerNoteId: note.id,
+          dealerId: note.dealer_id,
+          income: 0,
+          expense: 0,
+          count: 0,
+          lastCreatedAt: null,
+        });
+      }
+      for (const entry of data.entries) {
+        const summary = byNote.get(entry.ledger_note_id);
+        if (!summary) continue;
+        if (entry.kind === "income") summary.income += entry.amount_cents;
+        else summary.expense += entry.amount_cents;
+        summary.count += 1;
+        if (!summary.lastCreatedAt || entry.created_at > summary.lastCreatedAt) {
+          summary.lastCreatedAt = entry.created_at;
+        }
+      }
+      return [...byNote.values()];
+    },
+
     listEntries: async (ledgerNoteId) =>
       read()
         .entries.filter((entry) => entry.ledger_note_id === ledgerNoteId)
         .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id - b.id),
+
+    listEntriesPage: async (ledgerNoteId, limit, cursor) => {
+      const decoded = cursor ? decodeCursor(cursor) : null;
+      const all = read()
+        .entries.filter((entry) => entry.ledger_note_id === ledgerNoteId)
+        .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id);
+      const start = decoded
+        ? all.findIndex(
+            (entry) =>
+              entry.created_at < decoded.createdAt ||
+              (entry.created_at === decoded.createdAt && entry.id < decoded.id),
+          )
+        : 0;
+      const window = start < 0 ? [] : all.slice(start, start + limit + 1);
+      const hasMore = window.length > limit;
+      const entries = hasMore ? window.slice(0, limit) : window;
+      const oldest = entries.at(-1);
+      return {
+        entries,
+        nextCursor: hasMore && oldest ? encodeCursor(oldest) : null,
+      };
+    },
 
     addEntry: async ({ ledgerNoteId, kind, amountCents, description }) => {
       const data = read();

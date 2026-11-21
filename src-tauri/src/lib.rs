@@ -99,6 +99,16 @@ pub fn run() {
             sql: "UPDATE entries SET amount_cents = amount_cents * 10;",
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 5,
+            description: "list_query_indexes",
+            // Cover the ORDER BY on each hot list query so SQLite can scan the
+            // index instead of sorting a temp table as the data grows.
+            sql: "CREATE INDEX IF NOT EXISTS entries_note_created_idx ON entries(ledger_note_id, created_at DESC, id DESC);
+                  CREATE INDEX IF NOT EXISTS ledger_notes_dealer_updated_idx ON ledger_notes(dealer_id, updated_at DESC);
+                  CREATE INDEX IF NOT EXISTS dealers_updated_idx ON dealers(updated_at DESC, id DESC);",
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()

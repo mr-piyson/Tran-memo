@@ -59,11 +59,36 @@ export default function ListGrid<T>({
     overscan: 10,
   });
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: scrollKey re-triggers autoscroll when switching lists of equal length
+  const scrollStateRef = useRef<{
+    key: string | number | undefined;
+    firstKey: string | number | undefined;
+    count: number;
+    total: number;
+  } | null>(null);
+
   useEffect(() => {
-    if (!autoScrollToBottom || !scrollReady || rows.length === 0) return;
-    virtualizer.scrollToIndex(rows.length - 1, { align: "end" });
-  }, [autoScrollToBottom, scrollReady, rows.length, scrollKey, virtualizer]);
+    const total = virtualizer.getTotalSize();
+    if (!scrollReady || rows.length === 0) {
+      scrollStateRef.current = null;
+      return;
+    }
+    const firstRow = rows[0];
+    const firstKey = firstRow === undefined ? undefined : getRowId(firstRow);
+    const previous = scrollStateRef.current;
+    scrollStateRef.current = { key: scrollKey, firstKey, count: rows.length, total };
+
+    // Older pages are prepended: preserve the reader's position instead of
+    // yanking them to the bottom.
+    if (previous && previous.firstKey !== firstKey) {
+      if (scrollEl) scrollEl.scrollTop += total - previous.total;
+      return;
+    }
+
+    if (!autoScrollToBottom) return;
+    if (!previous || previous.key !== scrollKey || rows.length > previous.count) {
+      virtualizer.scrollToIndex(rows.length - 1, { align: "end" });
+    }
+  }, [autoScrollToBottom, scrollReady, rows, scrollKey, getRowId, virtualizer, scrollEl]);
 
   return (
     <div ref={setScrollRef} className={cn("min-h-0 w-full flex-1 overflow-y-auto", className)}>
