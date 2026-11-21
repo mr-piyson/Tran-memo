@@ -35,7 +35,7 @@ function ContextMenuContent({
         <ContextMenuPrimitive.Popup
           data-slot="context-menu-content"
           className={cn(
-            "z-50 w-[188px] origin-(--transform-origin) rounded-[12px] bg-popover p-2 pb-2.5 text-popover-foreground shadow-[0_8px_24px_rgba(0,0,0,0.65)] outline-hidden duration-100 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            "z-50 w-[188px] origin-(--transform-origin) rounded-[12px] bg-popover p-2 pb-2.5 text-popover-foreground shadow-menu outline-hidden duration-100 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
             className,
           )}
           {...props}
@@ -77,7 +77,7 @@ function ContextMenuSeparator({ className, ...props }: React.ComponentProps<type
   return (
     <ContextMenuPrimitive.Separator
       data-slot="context-menu-separator"
-      className={cn("mx-0.5 my-1.5 h-px border-0 bg-[#3a3a3a]", className)}
+      className={cn("mx-0.5 my-1.5 h-px border-0 bg-accent", className)}
       {...props}
     />
   )

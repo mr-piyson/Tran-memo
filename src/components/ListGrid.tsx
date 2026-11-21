@@ -14,12 +14,12 @@ ModuleRegistry.registerModules([AllCommunityModule]);
 
 /** Dark single-column list theme — rows carry their own custom UI. */
 const ledgerGridTheme = themeQuartz.withParams({
-  backgroundColor: "#1a1a1a",
-  foregroundColor: "#f2f2f2",
+  backgroundColor: "var(--background)",
+  foregroundColor: "var(--foreground)",
   borderColor: "transparent",
-  cellTextColor: "#f2f2f2",
-  rowHoverColor: "rgba(255, 255, 255, 0.05)",
-  selectedRowBackgroundColor: "#3a3a3a",
+  cellTextColor: "var(--foreground)",
+  rowHoverColor: "var(--overlay-hover)",
+  selectedRowBackgroundColor: "var(--accent)",
   fontFamily: "Roboto, system-ui, sans-serif",
   fontSize: 14,
   cellHorizontalPadding: 0,
@@ -100,7 +100,7 @@ export default function ListGrid<T>({
         "[&_.ag-header]:hidden",
         "[&_.ag-row]:border-0",
         "[&_.ag-cell]:overflow-visible [&_.ag-cell]:border-0 [&_.ag-cell]:p-0 [&_.ag-cell]:!leading-normal",
-        "[&_.ag-row-hover]:bg-white/5",
+        "[&_.ag-row-hover]:bg-overlay-hover",
         className,
       )}
     >

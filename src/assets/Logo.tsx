@@ -2,9 +2,7 @@ import type { SVGProps } from "react";
 
 export interface LogoProps extends SVGProps<SVGSVGElement> {
   /**
-   * Any CSS colour: hex, rgb(), hsl(), oklch(), `currentColor`
-   * or `var(--primary-color)`. Shades are derived by the browser with
-   * `color-mix()`, so CSS variables finally work.
+   * Any CSS color value (prefer CSS variables). Shades are derived with `color-mix()`.
    */
   primaryColor?: string;
   /** Accessible name. Pass "" to mark the logo as purely decorative. */
@@ -23,7 +21,7 @@ function hashId(input: string): string {
 }
 
 export default function Logo({
-  primaryColor = "var(--primary-color, #0072a5)",
+  primaryColor = "var(--primary)",
   title = "Diamond",
   width = "100%",
   height = "100%",

@@ -90,14 +90,14 @@ export function DealerAvatar({
       className={cn(
         "relative shrink-0 overflow-hidden rounded-full after:hidden",
         avatarSizeClasses[size],
-        isDefault ? "bg-[#c3d7f9] shadow-none" : "bg-transparent shadow-none",
+        isDefault ? "bg-avatar-bg shadow-none" : "bg-transparent shadow-none",
         className,
       )}
     >
       {isDefault && (
         <span aria-hidden="true" className="pointer-events-none absolute inset-0">
-          <span className="absolute left-1/2 top-[22%] size-[34%] -translate-x-1/2 rounded-full bg-[#5b9bf5]" />
-          <span className="absolute left-1/2 top-[60%] h-[60%] w-[68%] -translate-x-1/2 rounded-full bg-[#5b9bf5]" />
+          <span className="absolute left-1/2 top-[22%] size-[34%] -translate-x-1/2 rounded-full bg-avatar-mark" />
+          <span className="absolute left-1/2 top-[60%] h-[60%] w-[68%] -translate-x-1/2 rounded-full bg-avatar-mark" />
         </span>
       )}
       <AvatarFallback
@@ -124,7 +124,7 @@ function LedgerAvatar({
 
 function EmptyLedger({ text }: { text: string }) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center text-[26px] font-light text-[#4b4b4b]">
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center text-[26px] font-light text-text-faint">
       <ArchiveXIcon strokeWidth={1} className="size-[90px]" />
       <span>{text}</span>
     </div>
@@ -132,12 +132,12 @@ function EmptyLedger({ text }: { text: string }) {
 }
 
 const headerClass =
-  "flex h-[60px] flex-none items-center gap-2.5 bg-card px-3 shadow-[0_2px_4px_rgba(0,0,0,0.35)]";
+  "flex h-[60px] flex-none items-center gap-2.5 bg-card px-3 shadow-header";
 const headerTitleClass = "text-base leading-[1.15]";
 const headerSubClass = "text-xs text-muted-foreground";
 const rowMetaClass = "text-[11px] text-muted-foreground";
 const fabClass =
-  "absolute right-4 bottom-[18px] z-[5] grid size-[54px] min-w-[54px] place-items-center rounded-2xl bg-primary text-[#cfe9f5] shadow-[0_4px_10px_rgba(0,0,0,0.5)] active:scale-[0.96]";
+  "absolute right-4 bottom-[18px] z-[5] grid size-[54px] min-w-[54px] place-items-center rounded-2xl bg-primary text-fab-fg shadow-fab active:scale-[0.96]";
 
 /* ------------------------------------------------------------------ */
 /* Pane 1 — dealers                                                    */
@@ -209,7 +209,7 @@ export function DealersPanel({
     >
       <div className={headerClass}>
         <SidebarTrigger className="-ml-1" />
-        <Logo width="26" height="30" primaryColor="#9a9a9a" aria-hidden="true" />
+        <Logo width="26" height="30" primaryColor="var(--muted-foreground)" aria-hidden="true" />
         <div className="min-w-0 flex-1">
           <div className={headerTitleClass}>Ledger</div>
           <div className={headerSubClass}>Dealers</div>
@@ -220,7 +220,7 @@ export function DealersPanel({
       </div>
 
       <div className="shrink-0 px-3 py-3">
-        <div className="flex h-10 items-center gap-2.5 rounded-[10px] border-2 border-[#0b5f88] bg-panel px-3 text-[#bdbdbd]">
+        <div className="flex h-10 items-center gap-2.5 rounded-[10px] border-2 border-border-accent bg-panel px-3 text-text-soft">
           <SearchIcon className="size-5 shrink-0" />
           <Input
             type="search"
@@ -253,7 +253,7 @@ export function DealersPanel({
                         variant="ghost"
                         className={cn(
                           "h-full min-h-0 w-full items-center justify-start gap-3 rounded-xl px-3 py-3 text-left transition-[background-color]",
-                          "hover:bg-white/5",
+                          "hover:bg-overlay-hover",
                           selectedId === dealer.id && "bg-accent",
                         )}
                         aria-label={`Open ${dealer.name}`}
@@ -415,17 +415,17 @@ export function DealerDetailPanel({
           <div className="mt-auto grid grid-cols-2 gap-2 px-3 pt-4">
             <button
               type="button"
-              className="flex h-[38px] items-center gap-2.5 rounded-[9px] border-2 border-[color-mix(in_srgb,var(--success)_40%,#303030)] bg-[color-mix(in_srgb,var(--success)_22%,var(--secondary))] px-3 text-sm text-foreground active:brightness-[1.15]"
+              className="flex h-[38px] items-center gap-2.5 rounded-[9px] border-2 border-[color-mix(in_srgb,var(--success)_40%,var(--border-strong))] bg-[color-mix(in_srgb,var(--success)_22%,var(--secondary))] px-3 text-sm text-foreground active:brightness-[1.15]"
               onClick={() => {}}
             >
-              <span className="grid size-[18px] place-items-center rounded-[3px] bg-[#1f9d5a] text-[10px] font-bold text-white">
+              <span className="grid size-[18px] place-items-center rounded-[3px] bg-excel text-[10px] font-bold text-text-inverse">
                 x
               </span>
               Excel
             </button>
             <button
               type="button"
-              className="flex h-[38px] items-center gap-2.5 rounded-[9px] border-2 border-[#303030] bg-secondary px-3 text-sm text-foreground active:brightness-[1.15]"
+              className="flex h-[38px] items-center gap-2.5 rounded-[9px] border-2 border-border-strong bg-secondary px-3 text-sm text-foreground active:brightness-[1.15]"
               onClick={() => {}}
             >
               <SendIcon className="size-[18px] -rotate-45" />
@@ -433,7 +433,7 @@ export function DealerDetailPanel({
             </button>
             <button
               type="button"
-              className="flex h-[38px] items-center gap-2.5 rounded-[9px] border-2 border-[color-mix(in_srgb,var(--danger)_35%,#303030)] bg-[color-mix(in_srgb,var(--danger)_12%,var(--secondary))] px-3 text-sm text-danger active:brightness-[1.15]"
+              className="flex h-[38px] items-center gap-2.5 rounded-[9px] border-2 border-[color-mix(in_srgb,var(--danger)_35%,var(--border-strong))] bg-[color-mix(in_srgb,var(--danger)_12%,var(--secondary))] px-3 text-sm text-danger active:brightness-[1.15]"
               onClick={() => onDeleteDealer(dealer)}
             >
               <Trash2Icon className="size-[18px]" />
@@ -441,7 +441,7 @@ export function DealerDetailPanel({
             </button>
             <button
               type="button"
-              className="flex h-[38px] items-center gap-2.5 rounded-[9px] border-2 border-[color-mix(in_srgb,var(--primary)_45%,#303030)] bg-[color-mix(in_srgb,var(--primary)_18%,var(--secondary))] px-3 text-sm text-primary-hover active:brightness-[1.15]"
+              className="flex h-[38px] items-center gap-2.5 rounded-[9px] border-2 border-[color-mix(in_srgb,var(--primary)_45%,var(--border-strong))] bg-[color-mix(in_srgb,var(--primary)_18%,var(--secondary))] px-3 text-sm text-primary-hover active:brightness-[1.15]"
               onClick={onClose}
             >
               <span className="grid size-[18px] place-items-center rounded-full border border-current text-[11px]">
@@ -466,9 +466,9 @@ function DetailRow({
   value: string;
 }) {
   return (
-    <div className="flex min-h-[34px] overflow-hidden rounded-[9px] border-2 border-[#262626] bg-card">
-      <div className="flex w-[104px] flex-none items-center gap-2.5 bg-[#262626] px-2.5 text-xs text-[#d0d0d0]">
-        <span className="grid size-[15px] place-items-center text-[#d0d0d0] [&_svg]:size-[15px]">
+    <div className="flex min-h-[34px] overflow-hidden rounded-[9px] border-2 border-surface-sunken bg-card">
+      <div className="flex w-[104px] flex-none items-center gap-2.5 bg-surface-sunken px-2.5 text-xs text-secondary-foreground">
+        <span className="grid size-[15px] place-items-center text-secondary-foreground [&_svg]:size-[15px]">
           {icon}
         </span>
         <span>{label}</span>
@@ -576,7 +576,7 @@ export function LedgerNotesPanel({
               return (
                 <div
                   className={cn(
-                    "relative mx-2.5 mt-1.5 cursor-pointer overflow-hidden rounded-xl bg-[linear-gradient(#2e2e2e,#262626)] shadow-[0_2px_6px_rgba(0,0,0,0.45)] hover:bg-[linear-gradient(#343434,#2a2a2a)]",
+                    "relative mx-2.5 mt-1.5 cursor-pointer overflow-hidden rounded-xl bg-[linear-gradient(var(--surface-raised),var(--surface-sunken))] shadow-card hover:bg-[linear-gradient(var(--surface-raised-hover),var(--surface-raised))]",
                     selectedId === note.id && "outline-2 outline-primary-hover",
                   )}
                   style={{ "--tone": tone } as CSSProperties}
@@ -810,7 +810,7 @@ export function LedgerThread({
 
       {!loading && entries.length === 0 ? (
         <div className="flex min-h-0 flex-1 flex-col">
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center text-[#4b4b4b]">
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center text-text-faint">
             <ReceiptTextIcon strokeWidth={1} className="size-[90px]" />
             <span className="text-lg">No transactions yet</span>
           </div>
@@ -827,8 +827,8 @@ export function LedgerThread({
               if (row.kind === "divider") {
                 return (
                   <div className="relative my-4 mb-2 flex h-3 items-center justify-center">
-                    <span className="absolute inset-x-0 top-1/2 h-px bg-[#0b6a99]" />
-                    <span className="relative rounded-[3px] bg-primary px-[14px] py-[2px] text-[8px] text-white">
+                    <span className="absolute inset-x-0 top-1/2 h-px bg-divider-accent" />
+                    <span className="relative rounded-[3px] bg-primary px-[14px] py-[2px] text-[8px] text-primary-foreground">
                       {row.label}
                     </span>
                   </div>
@@ -847,7 +847,7 @@ export function LedgerThread({
                 >
                   <div
                     className={cn(
-                      "relative max-w-[78%] rounded-xl bg-[linear-gradient(#2e2e2e,#262626)] px-3 py-2 shadow-[0_2px_6px_rgba(0,0,0,0.45)]",
+                      "relative max-w-[78%] rounded-xl bg-[linear-gradient(var(--surface-raised),var(--surface-sunken))] px-3 py-2 shadow-card",
                       isIncome ? "rounded-bl-[4px]" : "rounded-br-[4px]",
                     )}
                     style={{ "--tone": entryTone } as CSSProperties}
@@ -863,7 +863,7 @@ export function LedgerThread({
                     </div>
                     <div className="mx-[-12px] my-1.5 h-[3px] bg-[linear-gradient(90deg,var(--tone),transparent_92%)]" />
                     <div
-                      className="overflow-hidden text-[10px] text-ellipsis whitespace-nowrap text-[#bdbdbd]"
+                      className="overflow-hidden text-[10px] text-ellipsis whitespace-nowrap text-text-soft"
                       title={entry.description}
                     >
                       {entry.description}
@@ -889,7 +889,7 @@ export function LedgerThread({
       {note && (
         <form onSubmit={submit} className="shrink-0">
           <div
-            className="mx-3 mb-3 flex-none overflow-hidden rounded-xl bg-card shadow-[0_2px_6px_rgba(0,0,0,0.45)]"
+            className="mx-3 mb-3 flex-none overflow-hidden rounded-xl bg-card shadow-card"
             style={{ "--tone": tone, "--bar": bar } as CSSProperties}
           >
             <div className="flex gap-2 px-2.5 pt-2">
@@ -923,7 +923,7 @@ export function LedgerThread({
                 <XIcon />
               </Button>
               <Input
-                className="h-auto min-w-0 flex-1 rounded-none border-0 bg-transparent p-0 text-right text-lg text-[var(--tone)] shadow-none ring-0 placeholder:text-[#6f8f7d] focus-visible:border-0 focus-visible:ring-0 dark:bg-transparent"
+                className="h-auto min-w-0 flex-1 rounded-none border-0 bg-transparent p-0 text-right text-lg text-[var(--tone)] shadow-none ring-0 placeholder:text-placeholder-income focus-visible:border-0 focus-visible:ring-0 dark:bg-transparent"
                 type="number"
                 min="0.001"
                 step="0.001"
