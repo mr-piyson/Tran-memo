@@ -35,13 +35,23 @@ function ContextMenuContent({
         <ContextMenuPrimitive.Popup
           data-slot="context-menu-content"
           className={cn(
-            "z-50 min-w-36 overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-hidden duration-100 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            "z-50 w-[188px] origin-(--transform-origin) rounded-[12px] bg-popover p-2 pb-2.5 text-popover-foreground shadow-[0_8px_24px_rgba(0,0,0,0.65)] outline-hidden duration-100 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
             className,
           )}
           {...props}
         />
       </ContextMenuPrimitive.Positioner>
     </ContextMenuPortal>
+  )
+}
+
+function ContextMenuList({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="context-menu-list"
+      className={cn("rounded-[10px] bg-background p-1.5", className)}
+      {...props}
+    />
   )
 }
 
@@ -55,7 +65,7 @@ function ContextMenuItem({
       data-slot="context-menu-item"
       data-variant={variant}
       className={cn(
-        "flex cursor-default items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-[variant=destructive]:text-danger data-[variant=destructive]:data-highlighted:bg-danger/10 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
+        "flex h-7 w-full cursor-default items-center gap-2.5 rounded-md px-2 text-xs font-medium outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-[variant=destructive]:text-danger data-[variant=destructive]:data-highlighted:bg-danger/10 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:size-3.5 [&_svg]:shrink-0",
         className,
       )}
       {...props}
@@ -67,10 +77,17 @@ function ContextMenuSeparator({ className, ...props }: React.ComponentProps<type
   return (
     <ContextMenuPrimitive.Separator
       data-slot="context-menu-separator"
-      className={cn("-mx-1 my-1 h-px bg-border", className)}
+      className={cn("mx-0.5 my-1.5 h-px border-0 bg-[#3a3a3a]", className)}
       {...props}
     />
   )
 }
 
-export { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator }
+export {
+  ContextMenu,
+  ContextMenuTrigger,
+  ContextMenuContent,
+  ContextMenuList,
+  ContextMenuItem,
+  ContextMenuSeparator,
+}

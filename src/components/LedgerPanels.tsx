@@ -18,6 +18,7 @@ import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuList,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
@@ -264,14 +265,16 @@ export function DealersPanel({
                     </span>
                   </ContextMenuTrigger>
                   <ContextMenuContent>
-                    <ContextMenuItem onClick={() => onEditDealer(dealer)}>
-                      <PencilIcon />
-                      Edit dealer
-                    </ContextMenuItem>
-                    <ContextMenuItem variant="destructive" onClick={() => onDeleteDealer(dealer)}>
-                      <Trash2Icon />
-                      Delete dealer
-                    </ContextMenuItem>
+                    <ContextMenuList>
+                      <ContextMenuItem onClick={() => onEditDealer(dealer)}>
+                        <PencilIcon />
+                        Edit dealer
+                      </ContextMenuItem>
+                      <ContextMenuItem variant="destructive" onClick={() => onDeleteDealer(dealer)}>
+                        <Trash2Icon />
+                        Delete dealer
+                      </ContextMenuItem>
+                    </ContextMenuList>
                   </ContextMenuContent>
                 </ContextMenu>
               );
@@ -425,14 +428,16 @@ export function LedgerNotesPanel({
                       </span>
                     </ContextMenuTrigger>
                     <ContextMenuContent>
-                      <ContextMenuItem onClick={() => onEditNote(note)}>
-                        <PencilIcon />
-                        Edit ledger note
-                      </ContextMenuItem>
-                      <ContextMenuItem variant="destructive" onClick={() => onDeleteNote(note)}>
-                        <Trash2Icon />
-                        Delete ledger note
-                      </ContextMenuItem>
+                      <ContextMenuList>
+                        <ContextMenuItem onClick={() => onEditNote(note)}>
+                          <PencilIcon />
+                          Edit ledger note
+                        </ContextMenuItem>
+                        <ContextMenuItem variant="destructive" onClick={() => onDeleteNote(note)}>
+                          <Trash2Icon />
+                          Delete ledger note
+                        </ContextMenuItem>
+                      </ContextMenuList>
                     </ContextMenuContent>
                   </ContextMenu>
                   <div className="ledger-code-card-bar" />
