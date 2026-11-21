@@ -130,14 +130,53 @@ body,
 
 .ledger-avatar {
   border-radius: 50%;
-  background: #c3d7f9;
-  color: #2f6ac4;
-  font-weight: 500;
   flex: none;
+  overflow: hidden;
+  position: relative;
 }
-.ledger-avatar[data-size="sm"] { width: 36px; height: 36px; font-size: 14px; }
-.ledger-avatar[data-size="md"] { width: 48px; height: 48px; font-size: 18px; }
-.ledger-avatar[data-size="lg"] { width: 64px; height: 64px; font-size: 22px; }
+.ledger-avatar::after {
+  display: none;
+}
+
+.ledger-avatar--default {
+  background: #c3d7f9;
+}
+.ledger-avatar-mark {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.ledger-avatar-mark::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  width: 34%;
+  height: 34%;
+  border-radius: 50%;
+  background: #5b9bf5;
+  transform: translateX(-50%);
+}
+.ledger-avatar-mark::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 60%;
+  width: 68%;
+  height: 60%;
+  border-radius: 50%;
+  background: #5b9bf5;
+  transform: translateX(-50%);
+}
+
+.ledger-avatar--emoji {
+  background: transparent;
+  box-shadow: none;
+}
+
+.ledger-avatar[data-size="sm"] { width: 40px; height: 40px; font-size: 34px; }
+.ledger-avatar[data-size="md"] { width: 52px; height: 52px; font-size: 44px; }
+.ledger-avatar[data-size="lg"] { width: 72px; height: 72px; font-size: 60px; }
 
 .ledger-header {
   display: flex;

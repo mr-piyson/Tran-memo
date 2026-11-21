@@ -54,9 +54,38 @@ function summarize(entries: Entry[]): Map<number, Summary> {
   return result;
 }
 
-function avatarText(dealer: Dealer): string {
-  if (dealer.emoji && dealer.emoji !== "💬") return dealer.emoji;
-  return dealer.name.trim().slice(0, 2).toUpperCase() || "D";
+export function isDefaultAvatar(emoji: string | null | undefined): boolean {
+  return !emoji || emoji === "💬";
+}
+
+export function DealerAvatar({
+  emoji,
+  size = "md",
+  className,
+}: {
+  emoji: string | null | undefined;
+  size?: "sm" | "md" | "lg";
+  className?: string;
+}) {
+  const isDefault = isDefaultAvatar(emoji);
+  const avatarSize = size === "md" ? "default" : size;
+  return (
+    <Avatar
+      size={avatarSize}
+      className={cn("ledger-avatar", isDefault ? "ledger-avatar--default" : "ledger-avatar--emoji", className)}
+      data-size={size}
+    >
+      {isDefault && <span aria-hidden="true" className="ledger-avatar-mark" />}
+      <AvatarFallback
+        className={cn(
+          "bg-transparent text-inherit",
+          isDefault ? "text-transparent" : "leading-none",
+        )}
+      >
+        {isDefault ? "" : emoji}
+      </AvatarFallback>
+    </Avatar>
+  );
 }
 
 function LedgerAvatar({
@@ -66,11 +95,7 @@ function LedgerAvatar({
   dealer: Dealer;
   size?: "sm" | "md" | "lg";
 }) {
-  return (
-    <Avatar className="ledger-avatar" data-size={size}>
-      <AvatarFallback className="bg-transparent">{avatarText(dealer)}</AvatarFallback>
-    </Avatar>
-  );
+  return <DealerAvatar emoji={dealer.emoji} size={size} />;
 }
 
 function EmptyLedger({ text }: { text: string }) {
@@ -284,7 +309,7 @@ export function LedgerNotesPanel({
         <Button variant="ghost" size="icon" aria-label="Back to dealers" onClick={onBack}>
           <ArrowLeftIcon />
         </Button>
-        {dealer && <LedgerAvatar dealer={dealer} size="sm" />}
+        {dealer && <LedgerAvatar dealer={dealer} />}
         <div className="min-w-0 flex-1">
           <div className="ledger-header-title truncate">{dealer?.name ?? "Dealer"}</div>
           <div className="ledger-header-sub">
@@ -495,7 +520,7 @@ export function LedgerThread({
         <Button variant="ghost" size="icon" aria-label="Back to ledger notes" onClick={onBack}>
           <ArrowLeftIcon />
         </Button>
-        {dealer && <LedgerAvatar dealer={dealer} size="sm" />}
+        {dealer && <LedgerAvatar dealer={dealer} />}
         <div className="min-w-0 flex-1">
           <div className="ledger-header-title truncate">
             {dealer?.name ?? "Dealer"}

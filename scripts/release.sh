@@ -56,6 +56,8 @@ android() {
   signer="$(ls -1 "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)"
   "$signer" sign --ks "$keystore" --ks-pass pass:android --key-pass pass:android \
     --out .releases/Ledger-Notes_0.1.0_arm64.apk "$unsigned"
+  # apksigner writes a verification sidecar that is not needed for distribution.
+  rm -f .releases/Ledger-Notes_0.1.0_arm64.apk.idsig
 }
 
 ios() {
@@ -65,7 +67,7 @@ ios() {
   local shim out tool
   shim="$(mktemp -d)"
   out="$(mktemp -d)"
-  trap 'rm -rf "$shim" "$out"' EXIT
+  trap "rm -rf '$shim' '$out'" EXIT
 
   # Xcode is installed but not selected as the active developer directory.
   # These shims make cargo/cc-rs/swift use the full Xcode toolchain.

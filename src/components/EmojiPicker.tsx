@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import data from "@emoji-mart/data";
 import { init, Picker } from "emoji-mart";
+import { DealerAvatar, isDefaultAvatar } from "@/components/LedgerPanels";
 import { Button } from "@/components/ui/button";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 init({ data });
 
@@ -43,21 +45,49 @@ export default function EmojiPicker({ value, onChange }: EmojiPickerProps) {
     return () => picker.remove();
   }, [open, host, onChange]);
 
+  const isDefault = isDefaultAvatar(value);
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        render={
-          <Button variant="outline" className="h-auto w-full justify-start p-2.5" />
-        }
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        className="h-auto w-full justify-start gap-3 p-2.5"
+        onClick={() => setOpen(true)}
       >
-        <span className="flex size-10 items-center justify-center rounded-lg bg-muted text-2xl">
-          {value}
+        <DealerAvatar emoji={value} size="md" />
+        <span className="flex min-w-0 flex-col items-start">
+          <span className="text-sm font-medium">
+            {isDefault ? "Default avatar" : "Emoji avatar"}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {isDefault ? "Choose an emoji or keep the default" : `${value} · Change`}
+          </span>
         </span>
-        <span className="text-sm text-muted-foreground">{value} · Change emoji</span>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto p-0">
-        <div ref={setHost} className="overflow-hidden rounded-lg" />
-      </PopoverContent>
-    </Popover>
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="w-auto max-w-[calc(100%-2rem)] gap-0 overflow-hidden p-0 sm:max-w-fit">
+          <DialogHeader className="border-b p-4 pb-3">
+            <DialogTitle>Choose avatar</DialogTitle>
+          </DialogHeader>
+          <div className="border-b p-2">
+            <Button
+              type="button"
+              variant={isDefault ? "secondary" : "ghost"}
+              size="sm"
+              className="w-full justify-start"
+              onClick={() => {
+                onChange("💬");
+                setOpen(false);
+              }}
+            >
+              Use default avatar
+            </Button>
+          </div>
+          <div ref={setHost} className="overflow-hidden" />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
