@@ -73,6 +73,7 @@ export default function App() {
   const [showNewDealer, setShowNewDealer] = useState(false);
   const [showNewNote, setShowNewNote] = useState(false);
   const [editingDealer, setEditingDealer] = useState<Dealer | null>(null);
+  const [editingNote, setEditingNote] = useState<LedgerNote | null>(null);
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newEmoji, setNewEmoji] = useState(DEFAULT_EMOJI);
@@ -214,15 +215,40 @@ export default function App() {
     }
   }
 
-  async function deleteNote() {
-    if (!selectedNote || !window.confirm(`Delete ${selectedNote.code} and its transactions?`)) return;
+  async function deleteNote(note?: LedgerNote) {
+    const target = note ?? selectedNote;
+    if (!target || !window.confirm(`Delete ${target.code} and its transactions?`)) return;
     try {
       const store = await getStore();
-      await store.deleteLedgerNote(selectedNote.id);
+      await store.deleteLedgerNote(target.id);
+      if (editingNote?.id === target.id) setEditingNote(null);
       setMobilePane("notes");
       await reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  function openEditNote(note: LedgerNote) {
+    setEditingNote(note);
+    setNewNoteLabel(note.label ?? "");
+  }
+
+  async function saveNote(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingNote || saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      const store = await getStore();
+      await store.renameLedgerNote(editingNote.id, newNoteLabel.trim());
+      await reload();
+      setEditingNote(null);
+      setNewNoteLabel("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -329,6 +355,8 @@ export default function App() {
                 onBack={() => setMobilePane("dealers")}
                 onSelect={selectNote}
                 onNewNote={() => setShowNewNote(true)}
+                onEditNote={openEditNote}
+                onDeleteNote={deleteNote}
                 onDeleteDealer={() => deleteDealer()}
               />
               <LedgerThread
@@ -339,7 +367,7 @@ export default function App() {
                 active={mobilePane === "thread"}
                 loading={loading}
                 onBack={() => setMobilePane("notes")}
-                onDeleteNote={deleteNote}
+                onDeleteNote={() => deleteNote()}
                 onAddEntry={addEntry}
                 onRemoveEntry={removeEntry}
               />
@@ -539,6 +567,49 @@ export default function App() {
                     </DialogClose>
                     <Button type="submit" disabled={saving || selectedDealerId === null}>
                       Create ledger note
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog
+              open={editingNote !== null}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setEditingNote(null);
+                  setNewNoteLabel("");
+                }
+              }}
+            >
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Edit ledger note</DialogTitle>
+                  <DialogDescription>
+                    Update the label for {editingNote?.code ?? "this ledger note"}.
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={saveNote} className="flex flex-col gap-4">
+                  <FieldGroup>
+                    <Field>
+                      <FieldLabel htmlFor="edit-note-label">Label (optional)</FieldLabel>
+                      <Input
+                        id="edit-note-label"
+                        type="text"
+                        maxLength={60}
+                        autoFocus
+                        placeholder="e.g. July 2026"
+                        value={newNoteLabel}
+                        onChange={(event) => setNewNoteLabel(event.target.value)}
+                      />
+                    </Field>
+                  </FieldGroup>
+                  <DialogFooter>
+                    <DialogClose render={<Button variant="outline" type="button" />}>
+                      Cancel
+                    </DialogClose>
+                    <Button type="submit" disabled={saving || !editingNote}>
+                      Save changes
                     </Button>
                   </DialogFooter>
                 </form>

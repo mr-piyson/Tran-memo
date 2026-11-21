@@ -302,6 +302,8 @@ export function LedgerNotesPanel({
   onBack,
   onSelect,
   onNewNote,
+  onEditNote,
+  onDeleteNote,
   onDeleteDealer,
 }: {
   dealer: Dealer | null;
@@ -314,6 +316,8 @@ export function LedgerNotesPanel({
   onBack: () => void;
   onSelect: (id: number) => void;
   onNewNote: () => void;
+  onEditNote: (note: LedgerNote) => void;
+  onDeleteNote: (note: LedgerNote) => void;
   onDeleteDealer: () => void;
 }) {
   const summaries = useMemo(() => summarize(entries), [entries]);
@@ -379,42 +383,58 @@ export function LedgerNotesPanel({
                   data-selected={selectedId === note.id}
                   style={{ "--tone": tone } as CSSProperties}
                 >
-                  <Button
-                    variant="ghost"
-                    className="h-auto w-full justify-start rounded-none p-3 text-left"
-                    aria-label={`Open ${note.code}`}
-                    onClick={() => onSelect(note.id)}
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-baseline justify-between gap-2">
-                        <span className="ledger-code">{note.code}</span>
-                        {summary?.last && (
-                          <span className="ledger-row-meta shrink-0">
-                            {formatListDate(summary.last.created_at)}
-                          </span>
-                        )}
-                      </span>
-                      <span className="mt-1 flex items-center justify-between gap-2">
-                        <span
-                          className="ledger-row-meta truncate"
-                          title={`${note.label || "Ledger note"} · ${summary?.count ?? 0} tx`}
-                        >
-                          {note.label || "Ledger note"}
-                          {` · ${summary?.count ?? 0} tx`}
+                  <ContextMenu>
+                    <ContextMenuTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          className="h-auto w-full justify-start rounded-none p-3 text-left"
+                          aria-label={`Open ${note.code}`}
+                          onClick={() => onSelect(note.id)}
+                        />
+                      }
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-baseline justify-between gap-2">
+                          <span className="ledger-code">{note.code}</span>
+                          {summary?.last && (
+                            <span className="ledger-row-meta shrink-0">
+                              {formatListDate(summary.last.created_at)}
+                            </span>
+                          )}
                         </span>
-                        {summary && summary.count > 0 && (
+                        <span className="mt-1 flex items-center justify-between gap-2">
                           <span
-                            className={cn(
-                              "ledger-row-total shrink-0 tabular-nums",
-                              noteTotal >= 0 ? "text-success" : "text-danger",
-                            )}
+                            className="ledger-row-meta truncate"
+                            title={`${note.label || "Ledger note"} · ${summary?.count ?? 0} tx`}
                           >
-                            {formatSigned(noteTotal, currency)}
+                            {note.label || "Ledger note"}
+                            {` · ${summary?.count ?? 0} tx`}
                           </span>
-                        )}
+                          {summary && summary.count > 0 && (
+                            <span
+                              className={cn(
+                                "ledger-row-total shrink-0 tabular-nums",
+                                noteTotal >= 0 ? "text-success" : "text-danger",
+                              )}
+                            >
+                              {formatSigned(noteTotal, currency)}
+                            </span>
+                          )}
+                        </span>
                       </span>
-                    </span>
-                  </Button>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent>
+                      <ContextMenuItem onClick={() => onEditNote(note)}>
+                        <PencilIcon />
+                        Edit ledger note
+                      </ContextMenuItem>
+                      <ContextMenuItem variant="destructive" onClick={() => onDeleteNote(note)}>
+                        <Trash2Icon />
+                        Delete ledger note
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
                   <div className="ledger-code-card-bar" />
                 </div>
               );
