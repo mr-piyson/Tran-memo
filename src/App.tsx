@@ -9,6 +9,7 @@ import {
 import AppSidebar from "./components/AppSidebar";
 import EmojiPicker from "./components/EmojiPicker";
 import {
+  DealerDetailPanel,
   DealersPanel,
   LedgerNotesPanel,
   LedgerThread,
@@ -74,6 +75,7 @@ export default function App() {
   const [showNewNote, setShowNewNote] = useState(false);
   const [editingDealer, setEditingDealer] = useState<Dealer | null>(null);
   const [editingNote, setEditingNote] = useState<LedgerNote | null>(null);
+  const [showDealerDetail, setShowDealerDetail] = useState(false);
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newEmoji, setNewEmoji] = useState(DEFAULT_EMOJI);
@@ -145,7 +147,7 @@ export default function App() {
   function selectDealer(id: number) {
     setSelectedDealerId(id);
     setSelectedNoteId(ledgerNotes.find((note) => note.dealer_id === id)?.id ?? null);
-    setMobilePane("notes");
+    setMobilePane(showDealerDetail ? "dealers" : "notes");
   }
 
   function selectNote(id: number) {
@@ -178,6 +180,7 @@ export default function App() {
       const store = await getStore();
       await store.deleteDealer(target.id);
       if (editingDealer?.id === target.id) setEditingDealer(null);
+      if (selectedDealerId === target.id) setShowDealerDetail(false);
       setMobilePane("dealers");
       await reload();
     } catch (err) {
@@ -190,6 +193,13 @@ export default function App() {
     setNewName(dealer.name);
     setNewPhone(dealer.phone ?? "");
     setNewEmoji(dealer.emoji || DEFAULT_EMOJI);
+  }
+
+  function openDealerDetail(dealer: Dealer) {
+    setSelectedDealerId(dealer.id);
+    setSelectedNoteId(ledgerNotes.find((note) => note.dealer_id === dealer.id)?.id ?? null);
+    setShowDealerDetail(true);
+    setMobilePane("dealers");
   }
 
   async function saveDealer(event: FormEvent<HTMLFormElement>) {
@@ -335,12 +345,13 @@ export default function App() {
                 entries={entries}
                 selectedId={selectedDealerId}
                 currency={currency}
-                active={mobilePane === "dealers"}
+                active={mobilePane === "dealers" && !showDealerDetail}
                 desktopActive={mobilePane === "dealers"}
                 onSelect={selectDealer}
                 onNewDealer={() => setShowNewDealer(true)}
                 onEditDealer={openEditDealer}
                 onDeleteDealer={deleteDealer}
+                onDetailDealer={openDealerDetail}
               />
               <LedgerNotesPanel
                 dealer={selectedDealer}
@@ -350,7 +361,7 @@ export default function App() {
                 )}
                 selectedId={selectedNoteId}
                 currency={currency}
-                active={mobilePane === "notes"}
+                active={mobilePane === "notes" && !showDealerDetail}
                 desktopActive={mobilePane !== "dealers"}
                 onBack={() => setMobilePane("dealers")}
                 onSelect={selectNote}
@@ -364,13 +375,26 @@ export default function App() {
                 note={selectedNote}
                 entries={threadEntries}
                 currency={currency}
-                active={mobilePane === "thread"}
+                active={mobilePane === "thread" && !showDealerDetail}
                 loading={loading}
                 onBack={() => setMobilePane("notes")}
                 onDeleteNote={() => deleteNote()}
                 onAddEntry={addEntry}
                 onRemoveEntry={removeEntry}
               />
+              {showDealerDetail && (
+                <DealerDetailPanel
+                  dealer={selectedDealer}
+                  entries={entries.filter((entry) =>
+                    dealerNotes.some((note) => note.id === entry.ledger_note_id),
+                  )}
+                  currency={currency}
+                  active={showDealerDetail}
+                  desktopActive={showDealerDetail}
+                  onClose={() => setShowDealerDetail(false)}
+                  onDeleteDealer={deleteDealer}
+                />
+              )}
             </div>
 
             {error && (

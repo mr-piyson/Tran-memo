@@ -411,3 +411,79 @@ body,
   white-space: nowrap;
 }
 
+
+/* ---------- dealer detail panel ---------- */
+
+.ledger-detail-row {
+  display: flex;
+  min-height: 34px;
+  border-radius: 9px;
+  background: var(--card);
+  border: 2px solid #262626;
+  overflow: hidden;
+}
+.ledger-detail-key {
+  width: 104px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  font-size: 12px;
+  background: #262626;
+  color: #d0d0d0;
+  flex: none;
+}
+.ledger-detail-val {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  background: var(--card);
+  padding: 6px 8px;
+  min-width: 0;
+  text-align: center;
+  word-break: break-word;
+}
+.ledger-detail-btn {
+  height: 38px;
+  border-radius: 9px;
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  font-size: 14px;
+  color: var(--foreground);
+}
+.ledger-detail-btn:active { filter: brightness(1.15); }
+.ledger-detail-btn--excel {
+  background: color-mix(in srgb, var(--success) 22%, var(--secondary));
+  border-color: color-mix(in srgb, var(--success) 40%, #303030);
+}
+.ledger-detail-btn--export {
+  background: var(--secondary);
+  border-color: #303030;
+}
+.ledger-detail-btn--delete {
+  background: color-mix(in srgb, var(--danger) 12%, var(--secondary));
+  border-color: color-mix(in srgb, var(--danger) 35%, #303030);
+  color: var(--danger);
+}
+.ledger-detail-btn--done {
+  background: color-mix(in srgb, var(--primary) 18%, var(--secondary));
+  border-color: color-mix(in srgb, var(--primary) 45%, #303030);
+  color: var(--primary-hover);
+}
+.ledger-detail-xlicon {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  background: #1f9d5a;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+}

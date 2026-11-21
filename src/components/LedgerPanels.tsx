@@ -1,7 +1,8 @@
-import { useMemo, useState, type CSSProperties, type FormEvent } from "react";
+import { useMemo, useState, type CSSProperties, type FormEvent, type ReactNode } from "react";
 import {
   ArchiveXIcon,
   ArrowLeftIcon,
+  InfoIcon,
   PencilIcon,
   ReceiptTextIcon,
   SearchIcon,
@@ -131,6 +132,7 @@ export function DealersPanel({
   onNewDealer,
   onEditDealer,
   onDeleteDealer,
+  onDetailDealer,
 }: {
   dealers: Dealer[];
   ledgerNotes: LedgerNote[];
@@ -143,6 +145,7 @@ export function DealersPanel({
   onNewDealer: () => void;
   onEditDealer: (dealer: Dealer) => void;
   onDeleteDealer: (dealer: Dealer) => void;
+  onDetailDealer: (dealer: Dealer) => void;
 }) {
   const [search, setSearch] = useState("");
 
@@ -266,6 +269,10 @@ export function DealersPanel({
                   </ContextMenuTrigger>
                   <ContextMenuContent>
                     <ContextMenuList>
+                      <ContextMenuItem onClick={() => onDetailDealer(dealer)}>
+                        <InfoIcon />
+                        Detail
+                      </ContextMenuItem>
                       <ContextMenuItem onClick={() => onEditDealer(dealer)}>
                         <PencilIcon />
                         Edit dealer
@@ -287,6 +294,133 @@ export function DealersPanel({
         <span className="text-2xl leading-none">+</span>
       </Button>
     </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Dealer detail — PoC "7 · Deal detail" inspired panel               */
+/* ------------------------------------------------------------------ */
+
+export function DealerDetailPanel({
+  dealer,
+  entries,
+  currency,
+  active,
+  desktopActive,
+  onClose,
+  onDeleteDealer,
+}: {
+  dealer: Dealer | null;
+  entries: Entry[];
+  currency: Currency;
+  active: boolean;
+  desktopActive: boolean;
+  onClose: () => void;
+  onDeleteDealer: (dealer: Dealer) => void;
+}) {
+  const total = useMemo(
+    () =>
+      entries.reduce(
+        (sum, entry) => sum + (entry.kind === "income" ? entry.amount_cents : -entry.amount_cents),
+        0,
+      ),
+    [entries],
+  );
+  const createdDate = dealer
+    ? new Date(dealer.created_at).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }).replaceAll("/", " - ")
+    : "—";
+
+  return (
+    <section
+      className={cn(
+        "relative flex min-h-0 w-full shrink-0 flex-col border-l lg:w-80",
+        !active && "max-lg:hidden",
+        !desktopActive && "lg:hidden",
+      )}
+    >
+      <div className="ledger-header">
+        <Button variant="ghost" size="icon" aria-label="Back" onClick={onClose}>
+          <ArrowLeftIcon />
+        </Button>
+        <div className="min-w-0 flex-1">
+          <div className="ledger-header-title truncate">Dealer detail</div>
+          <div className="ledger-header-sub truncate">{dealer?.name ?? "—"}</div>
+        </div>
+      </div>
+
+      {!dealer ? (
+        <div className="flex min-h-0 flex-1 flex-col">
+          <EmptyLedger text="No dealer selected" />
+        </div>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col overflow-auto pb-4">
+          <div className="flex items-center gap-5 px-6 pt-5 pb-7">
+            <DealerAvatar emoji={dealer.emoji} size="lg" className="size-[76px]" />
+            <div className="min-w-0">
+              <div className="text-[26px] leading-tight">{dealer.name}</div>
+              <div className={cn("mt-1 text-sm tabular-nums", total >= 0 ? "text-success" : "text-danger")}>
+                {formatSigned(total, currency)}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2 px-3.5">
+            <DetailRow icon={<ReceiptTextIcon />} label="Date" value={createdDate} />
+            <DetailRow icon={<InfoIcon />} label="Email" value={dealer.email || "—"} />
+            <DetailRow icon={<span className="text-[15px] leading-none">☎</span>} label="Phone" value={dealer.phone || "—"} />
+          </div>
+
+          <div className="mt-auto grid grid-cols-2 gap-2 px-3 pt-4">
+            <button type="button" className="ledger-detail-btn ledger-detail-btn--excel" onClick={() => {}}>
+              <span className="ledger-detail-xlicon">x</span>
+              Excel
+            </button>
+            <button type="button" className="ledger-detail-btn ledger-detail-btn--export" onClick={() => {}}>
+              <SendIcon className="size-[18px] -rotate-45" />
+              Export
+            </button>
+            <button
+              type="button"
+              className="ledger-detail-btn ledger-detail-btn--delete"
+              onClick={() => onDeleteDealer(dealer)}
+            >
+              <Trash2Icon className="size-[18px]" />
+              Delete
+            </button>
+            <button type="button" className="ledger-detail-btn ledger-detail-btn--done" onClick={onClose}>
+              <span className="grid size-[18px] place-items-center rounded-full border border-current text-[11px]">✓</span>
+              Done
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function DetailRow({
+  icon,
+  label,
+  value,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="ledger-detail-row">
+      <div className="ledger-detail-key">
+        <span className="grid size-[15px] place-items-center text-[#d0d0d0] [&_svg]:size-[15px]">{icon}</span>
+        <span>{label}</span>
+      </div>
+      <div className="ledger-detail-val" title={value}>
+        {value}
+      </div>
+    </div>
   );
 }
 
