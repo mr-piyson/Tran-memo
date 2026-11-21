@@ -72,6 +72,7 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showNewDealer, setShowNewDealer] = useState(false);
   const [showNewNote, setShowNewNote] = useState(false);
+  const [editingDealer, setEditingDealer] = useState<Dealer | null>(null);
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newEmoji, setNewEmoji] = useState(DEFAULT_EMOJI);
@@ -169,15 +170,47 @@ export default function App() {
     await reload();
   }
 
-  async function deleteDealer() {
-    if (!selectedDealer || !window.confirm(`Delete "${selectedDealer.name}" and all its ledger notes?`)) return;
+  async function deleteDealer(dealer?: Dealer) {
+    const target = dealer ?? selectedDealer;
+    if (!target || !window.confirm(`Delete "${target.name}" and all its ledger notes?`)) return;
     try {
       const store = await getStore();
-      await store.deleteDealer(selectedDealer.id);
+      await store.deleteDealer(target.id);
+      if (editingDealer?.id === target.id) setEditingDealer(null);
       setMobilePane("dealers");
       await reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  function openEditDealer(dealer: Dealer) {
+    setEditingDealer(dealer);
+    setNewName(dealer.name);
+    setNewPhone(dealer.phone ?? "");
+    setNewEmoji(dealer.emoji || DEFAULT_EMOJI);
+  }
+
+  async function saveDealer(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingDealer) return;
+    const name = newName.trim();
+    if (!name || saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      const store = await getStore();
+      await store.updateDealer(editingDealer.id, {
+        name,
+        phone: newPhone.trim(),
+        emoji: newEmoji,
+      });
+      await reload();
+      setEditingDealer(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -280,6 +313,8 @@ export default function App() {
                 desktopActive={mobilePane === "dealers"}
                 onSelect={selectDealer}
                 onNewDealer={() => setShowNewDealer(true)}
+                onEditDealer={openEditDealer}
+                onDeleteDealer={deleteDealer}
               />
               <LedgerNotesPanel
                 dealer={selectedDealer}
@@ -294,7 +329,7 @@ export default function App() {
                 onBack={() => setMobilePane("dealers")}
                 onSelect={selectNote}
                 onNewNote={() => setShowNewNote(true)}
-                onDeleteDealer={deleteDealer}
+                onDeleteDealer={() => deleteDealer()}
               />
               <LedgerThread
                 dealer={selectedDealer}
@@ -416,6 +451,59 @@ export default function App() {
                     </DialogClose>
                     <Button type="submit" disabled={saving}>
                       Create dealer
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog
+              open={editingDealer !== null}
+              onOpenChange={(open) => {
+                if (!open) setEditingDealer(null);
+              }}
+            >
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Edit dealer</DialogTitle>
+                  <DialogDescription>Update the dealer name, phone, or avatar.</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={saveDealer} className="flex flex-col gap-4">
+                  <FieldGroup>
+                    <Field>
+                      <FieldLabel htmlFor="edit-dealer-name">Dealer name</FieldLabel>
+                      <Input
+                        id="edit-dealer-name"
+                        type="text"
+                        required
+                        maxLength={60}
+                        autoFocus
+                        value={newName}
+                        onChange={(event) => setNewName(event.target.value)}
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="edit-dealer-phone">Phone (optional)</FieldLabel>
+                      <Input
+                        id="edit-dealer-phone"
+                        type="tel"
+                        maxLength={30}
+                        placeholder="+973 36860504"
+                        value={newPhone}
+                        onChange={(event) => setNewPhone(event.target.value)}
+                      />
+                    </Field>
+                    <Field>
+                      <FieldLabel>Avatar</FieldLabel>
+                      <EmojiPicker value={newEmoji} onChange={setNewEmoji} />
+                    </Field>
+                  </FieldGroup>
+                  <DialogFooter>
+                    <DialogClose render={<Button variant="outline" type="button" />}>
+                      Cancel
+                    </DialogClose>
+                    <Button type="submit" disabled={saving || !editingDealer}>
+                      Save changes
                     </Button>
                   </DialogFooter>
                 </form>

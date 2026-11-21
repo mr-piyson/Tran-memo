@@ -2,6 +2,7 @@ import { useMemo, useState, type CSSProperties, type FormEvent } from "react";
 import {
   ArchiveXIcon,
   ArrowLeftIcon,
+  PencilIcon,
   ReceiptTextIcon,
   SearchIcon,
   SendIcon,
@@ -13,6 +14,12 @@ import ListGrid from "@/components/ListGrid";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -121,6 +128,8 @@ export function DealersPanel({
   desktopActive,
   onSelect,
   onNewDealer,
+  onEditDealer,
+  onDeleteDealer,
 }: {
   dealers: Dealer[];
   ledgerNotes: LedgerNote[];
@@ -131,6 +140,8 @@ export function DealersPanel({
   desktopActive: boolean;
   onSelect: (id: number) => void;
   onNewDealer: () => void;
+  onEditDealer: (dealer: Dealer) => void;
+  onDeleteDealer: (dealer: Dealer) => void;
 }) {
   const [search, setSearch] = useState("");
 
@@ -207,46 +218,62 @@ export function DealersPanel({
             renderRow={(dealer) => {
               const summary = summaries.get(dealer.id);
               return (
-                <Button
-                  variant="ghost"
-                  className="ledger-row"
-                  data-selected={selectedId === dealer.id}
-                  aria-label={`Open ${dealer.name}`}
-                  onClick={() => onSelect(dealer.id)}
-                >
-                  <LedgerAvatar dealer={dealer} />
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-baseline justify-between gap-2">
-                      <span className="ledger-row-name truncate" title={dealer.name}>
-                        {dealer.name}
-                      </span>
-                      {summary?.last && (
-                        <span className="ledger-row-meta shrink-0">
-                          {formatListDate(summary.last.created_at)}
+                <ContextMenu>
+                  <ContextMenuTrigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        className="ledger-row"
+                        data-selected={selectedId === dealer.id}
+                        aria-label={`Open ${dealer.name}`}
+                        onClick={() => onSelect(dealer.id)}
+                      />
+                    }
+                  >
+                    <LedgerAvatar dealer={dealer} />
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-baseline justify-between gap-2">
+                        <span className="ledger-row-name truncate" title={dealer.name}>
+                          {dealer.name}
                         </span>
-                      )}
-                    </span>
-                    <span className="mt-1 flex items-center justify-between gap-2">
-                      <span
-                        className="ledger-row-meta truncate"
-                        title={`${dealer.phone || "—"}${summary ? ` · ${summary.count} tx` : " · no transactions"}`}
-                      >
-                        {dealer.phone || "—"}
-                        {summary ? ` · ${summary.count} tx` : " · no transactions"}
+                        {summary?.last && (
+                          <span className="ledger-row-meta shrink-0">
+                            {formatListDate(summary.last.created_at)}
+                          </span>
+                        )}
                       </span>
-                      {summary && summary.count > 0 && (
+                      <span className="mt-1 flex items-center justify-between gap-2">
                         <span
-                          className={cn(
-                            "ledger-row-total shrink-0 tabular-nums",
-                            summary.total >= 0 ? "text-success" : "text-danger",
-                          )}
+                          className="ledger-row-meta truncate"
+                          title={`${dealer.phone || "—"}${summary ? ` · ${summary.count} tx` : " · no transactions"}`}
                         >
-                          {formatSigned(summary.total, currency)}
+                          {dealer.phone || "—"}
+                          {summary ? ` · ${summary.count} tx` : " · no transactions"}
                         </span>
-                      )}
+                        {summary && summary.count > 0 && (
+                          <span
+                            className={cn(
+                              "ledger-row-total shrink-0 tabular-nums",
+                              summary.total >= 0 ? "text-success" : "text-danger",
+                            )}
+                          >
+                            {formatSigned(summary.total, currency)}
+                          </span>
+                        )}
+                      </span>
                     </span>
-                  </span>
-                </Button>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent>
+                    <ContextMenuItem onClick={() => onEditDealer(dealer)}>
+                      <PencilIcon />
+                      Edit dealer
+                    </ContextMenuItem>
+                    <ContextMenuItem variant="destructive" onClick={() => onDeleteDealer(dealer)}>
+                      <Trash2Icon />
+                      Delete dealer
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
               );
             }}
           />

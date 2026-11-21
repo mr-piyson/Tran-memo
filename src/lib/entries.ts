@@ -52,7 +52,10 @@ export interface NewEntry {
 export interface EntryStore {
   listDealers(): Promise<Dealer[]>;
   createDealer(dealer: NewDealer): Promise<Dealer>;
-  renameDealer(id: number, name: string): Promise<void>;
+  updateDealer(
+    id: number,
+    patch: Partial<Pick<Dealer, "name" | "phone" | "email" | "emoji">>,
+  ): Promise<void>;
   deleteDealer(id: number): Promise<void>;
 
   listLedgerNotes(dealerId: number): Promise<LedgerNote[]>;
@@ -136,13 +139,23 @@ function sqliteStore(): Promise<EntryStore> {
           return dealer;
         },
 
-        renameDealer: (id, name) =>
-          db
-            .execute(
-              `UPDATE dealers SET name = $1, updated_at = ${now} WHERE id = $2`,
-              [name, id],
-            )
-            .then(() => undefined),
+        updateDealer: async (id, patch) => {
+          const fields: string[] = [];
+          const values: unknown[] = [];
+          let idx = 1;
+          for (const [key, value] of Object.entries(patch)) {
+            if (value === undefined) continue;
+            fields.push(`${key} = $${idx++}`);
+            values.push(value);
+          }
+          if (fields.length === 0) return;
+          fields.push(`updated_at = ${now}`);
+          values.push(id);
+          await db.execute(
+            `UPDATE dealers SET ${fields.join(", ")} WHERE id = $${idx}`,
+            values,
+          );
+        },
 
         deleteDealer: (id) =>
           db.execute("DELETE FROM dealers WHERE id = $1", [id]).then(() => undefined),
@@ -344,11 +357,11 @@ function browserStore(): EntryStore {
       return dealer;
     },
 
-    renameDealer: async (id, name) => {
+    updateDealer: async (id, patch) => {
       const data = read();
       const dealer = data.dealers.find((item) => item.id === id);
       if (dealer) {
-        dealer.name = name;
+        Object.assign(dealer, patch);
         dealer.updated_at = new Date().toISOString();
       }
       write(data);
