@@ -71,7 +71,7 @@ export default function ListGrid<T>({
         resizable: false,
         suppressMovable: true,
         cellRenderer: (params: CustomCellRendererProps<T>) => (
-          <div className="ledger-grid-row">{renderRowRef.current(params.data as T)}</div>
+          <div className="flex h-full w-full items-center [&>*]:w-full">{renderRowRef.current(params.data as T)}</div>
         ),
       },
     ],
@@ -93,7 +93,17 @@ export default function ListGrid<T>({
   }, [rows.length, autoScrollToBottom, scrollKey, ready]);
 
   return (
-    <div className={cn("ledger-grid min-h-0 flex-1", className)}>
+    <div
+      className={cn(
+        "min-h-0 flex-1",
+        "[&_.ag-root-wrapper]:border-0 [&_.ag-root-wrapper]:rounded-none [&_.ag-root-wrapper]:bg-transparent",
+        "[&_.ag-header]:hidden",
+        "[&_.ag-row]:border-0",
+        "[&_.ag-cell]:overflow-visible [&_.ag-cell]:border-0 [&_.ag-cell]:p-0 [&_.ag-cell]:!leading-normal",
+        "[&_.ag-row-hover]:bg-white/5",
+        className,
+      )}
+    >
       <AgGridReact<T>
         theme={ledgerGridTheme}
         rowData={rows}

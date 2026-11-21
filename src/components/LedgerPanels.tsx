@@ -67,6 +67,12 @@ export function isDefaultAvatar(emoji: string | null | undefined): boolean {
   return !emoji || emoji === "💬";
 }
 
+const avatarSizeClasses = {
+  sm: "size-8 text-[34px]",
+  md: "size-[42px] text-[44px]",
+  lg: "size-[52px] text-[60px]",
+} as const;
+
 export function DealerAvatar({
   emoji,
   size = "md",
@@ -81,14 +87,23 @@ export function DealerAvatar({
   return (
     <Avatar
       size={avatarSize}
-      className={cn("ledger-avatar", isDefault ? "ledger-avatar--default" : "ledger-avatar--emoji", className)}
-      data-size={size}
+      className={cn(
+        "relative shrink-0 overflow-hidden rounded-full after:hidden",
+        avatarSizeClasses[size],
+        isDefault ? "bg-[#c3d7f9] shadow-none" : "bg-transparent shadow-none",
+        className,
+      )}
     >
-      {isDefault && <span aria-hidden="true" className="ledger-avatar-mark" />}
+      {isDefault && (
+        <span aria-hidden="true" className="pointer-events-none absolute inset-0">
+          <span className="absolute left-1/2 top-[22%] size-[34%] -translate-x-1/2 rounded-full bg-[#5b9bf5]" />
+          <span className="absolute left-1/2 top-[60%] h-[60%] w-[68%] -translate-x-1/2 rounded-full bg-[#5b9bf5]" />
+        </span>
+      )}
       <AvatarFallback
         className={cn(
-          "bg-transparent text-inherit",
-          isDefault ? "text-transparent" : "leading-none",
+          "bg-transparent leading-none !text-[inherit]",
+          isDefault ? "text-transparent" : "text-inherit",
         )}
       >
         {isDefault ? "" : emoji}
@@ -109,12 +124,20 @@ function LedgerAvatar({
 
 function EmptyLedger({ text }: { text: string }) {
   return (
-    <div className="ledger-empty">
-      <ArchiveXIcon strokeWidth={1} />
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center text-[26px] font-light text-[#4b4b4b]">
+      <ArchiveXIcon strokeWidth={1} className="size-[90px]" />
       <span>{text}</span>
     </div>
   );
 }
+
+const headerClass =
+  "flex h-[60px] flex-none items-center gap-2.5 bg-card px-3 shadow-[0_2px_4px_rgba(0,0,0,0.35)]";
+const headerTitleClass = "text-base leading-[1.15]";
+const headerSubClass = "text-xs text-muted-foreground";
+const rowMetaClass = "text-[11px] text-muted-foreground";
+const fabClass =
+  "absolute right-4 bottom-[18px] z-[5] grid size-[54px] min-w-[54px] place-items-center rounded-2xl bg-primary text-[#cfe9f5] shadow-[0_4px_10px_rgba(0,0,0,0.5)] active:scale-[0.96]";
 
 /* ------------------------------------------------------------------ */
 /* Pane 1 — dealers                                                    */
@@ -184,12 +207,12 @@ export function DealersPanel({
         !desktopActive && "lg:hidden",
       )}
     >
-      <div className="ledger-header">
+      <div className={headerClass}>
         <SidebarTrigger className="-ml-1" />
         <Logo width="26" height="30" primaryColor="#9a9a9a" aria-hidden="true" />
         <div className="min-w-0 flex-1">
-          <div className="ledger-header-title">Ledger</div>
-          <div className="ledger-header-sub">Dealers</div>
+          <div className={headerTitleClass}>Ledger</div>
+          <div className={headerSubClass}>Dealers</div>
         </div>
         <Button size="icon" variant="ghost" aria-label="New dealer" onClick={onNewDealer}>
           <span className="text-xl leading-none">+</span>
@@ -197,7 +220,7 @@ export function DealersPanel({
       </div>
 
       <div className="shrink-0 px-3 py-3">
-        <div className="ledger-search">
+        <div className="flex h-10 items-center gap-2.5 rounded-[10px] border-2 border-[#0b5f88] bg-panel px-3 text-[#bdbdbd]">
           <SearchIcon className="size-5 shrink-0" />
           <Input
             type="search"
@@ -205,6 +228,7 @@ export function DealersPanel({
             placeholder="Search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
+            className="h-auto min-w-0 flex-1 rounded-none border-0 bg-transparent p-0 text-base text-foreground shadow-none ring-0 placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0 dark:bg-transparent"
           />
         </div>
       </div>
@@ -227,8 +251,11 @@ export function DealersPanel({
                     render={
                       <Button
                         variant="ghost"
-                        className="ledger-row"
-                        data-selected={selectedId === dealer.id}
+                        className={cn(
+                          "h-full min-h-0 w-full items-center justify-start gap-3 rounded-xl px-3 py-3 text-left transition-[background-color]",
+                          "hover:bg-white/5",
+                          selectedId === dealer.id && "bg-accent",
+                        )}
                         aria-label={`Open ${dealer.name}`}
                         onClick={() => onSelect(dealer.id)}
                       />
@@ -237,18 +264,18 @@ export function DealersPanel({
                     <LedgerAvatar dealer={dealer} />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-baseline justify-between gap-2">
-                        <span className="ledger-row-name truncate" title={dealer.name}>
+                        <span className="truncate text-[15px]" title={dealer.name}>
                           {dealer.name}
                         </span>
                         {summary?.last && (
-                          <span className="ledger-row-meta shrink-0">
+                          <span className={cn(rowMetaClass, "shrink-0")}>
                             {formatListDate(summary.last.created_at)}
                           </span>
                         )}
                       </span>
                       <span className="mt-1 flex items-center justify-between gap-2">
                         <span
-                          className="ledger-row-meta truncate"
+                          className={cn(rowMetaClass, "truncate")}
                           title={`${dealer.phone || "—"}${summary ? ` · ${summary.count} tx` : " · no transactions"}`}
                         >
                           {dealer.phone || "—"}
@@ -257,7 +284,7 @@ export function DealersPanel({
                         {summary && summary.count > 0 && (
                           <span
                             className={cn(
-                              "ledger-row-total shrink-0 tabular-nums",
+                              "shrink-0 text-sm font-medium tabular-nums",
                               summary.total >= 0 ? "text-success" : "text-danger",
                             )}
                           >
@@ -290,7 +317,7 @@ export function DealersPanel({
         </div>
       )}
 
-      <Button className="ledger-fab" aria-label="New dealer" onClick={onNewDealer}>
+      <Button className={fabClass} aria-label="New dealer" onClick={onNewDealer}>
         <span className="text-2xl leading-none">+</span>
       </Button>
     </section>
@@ -327,11 +354,13 @@ export function DealerDetailPanel({
     [entries],
   );
   const createdDate = dealer
-    ? new Date(dealer.created_at).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      }).replaceAll("/", " - ")
+    ? new Date(dealer.created_at)
+        .toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        })
+        .replaceAll("/", " - ")
     : "—";
 
   return (
@@ -342,13 +371,13 @@ export function DealerDetailPanel({
         !desktopActive && "lg:hidden",
       )}
     >
-      <div className="ledger-header">
+      <div className={headerClass}>
         <Button variant="ghost" size="icon" aria-label="Back" onClick={onClose}>
           <ArrowLeftIcon />
         </Button>
         <div className="min-w-0 flex-1">
-          <div className="ledger-header-title truncate">Dealer detail</div>
-          <div className="ledger-header-sub truncate">{dealer?.name ?? "—"}</div>
+          <div className={cn(headerTitleClass, "truncate")}>Dealer detail</div>
+          <div className={cn(headerSubClass, "truncate")}>{dealer?.name ?? "—"}</div>
         </div>
       </div>
 
@@ -362,7 +391,12 @@ export function DealerDetailPanel({
             <DealerAvatar emoji={dealer.emoji} size="lg" className="size-[76px]" />
             <div className="min-w-0">
               <div className="text-[26px] leading-tight">{dealer.name}</div>
-              <div className={cn("mt-1 text-sm tabular-nums", total >= 0 ? "text-success" : "text-danger")}>
+              <div
+                className={cn(
+                  "mt-1 text-sm tabular-nums",
+                  total >= 0 ? "text-success" : "text-danger",
+                )}
+              >
                 {formatSigned(total, currency)}
               </div>
             </div>
@@ -371,28 +405,48 @@ export function DealerDetailPanel({
           <div className="flex flex-col gap-2 px-3.5">
             <DetailRow icon={<ReceiptTextIcon />} label="Date" value={createdDate} />
             <DetailRow icon={<InfoIcon />} label="Email" value={dealer.email || "—"} />
-            <DetailRow icon={<span className="text-[15px] leading-none">☎</span>} label="Phone" value={dealer.phone || "—"} />
+            <DetailRow
+              icon={<span className="text-[15px] leading-none">☎</span>}
+              label="Phone"
+              value={dealer.phone || "—"}
+            />
           </div>
 
           <div className="mt-auto grid grid-cols-2 gap-2 px-3 pt-4">
-            <button type="button" className="ledger-detail-btn ledger-detail-btn--excel" onClick={() => {}}>
-              <span className="ledger-detail-xlicon">x</span>
+            <button
+              type="button"
+              className="flex h-[38px] items-center gap-2.5 rounded-[9px] border-2 border-[color-mix(in_srgb,var(--success)_40%,#303030)] bg-[color-mix(in_srgb,var(--success)_22%,var(--secondary))] px-3 text-sm text-foreground active:brightness-[1.15]"
+              onClick={() => {}}
+            >
+              <span className="grid size-[18px] place-items-center rounded-[3px] bg-[#1f9d5a] text-[10px] font-bold text-white">
+                x
+              </span>
               Excel
             </button>
-            <button type="button" className="ledger-detail-btn ledger-detail-btn--export" onClick={() => {}}>
+            <button
+              type="button"
+              className="flex h-[38px] items-center gap-2.5 rounded-[9px] border-2 border-[#303030] bg-secondary px-3 text-sm text-foreground active:brightness-[1.15]"
+              onClick={() => {}}
+            >
               <SendIcon className="size-[18px] -rotate-45" />
               Export
             </button>
             <button
               type="button"
-              className="ledger-detail-btn ledger-detail-btn--delete"
+              className="flex h-[38px] items-center gap-2.5 rounded-[9px] border-2 border-[color-mix(in_srgb,var(--danger)_35%,#303030)] bg-[color-mix(in_srgb,var(--danger)_12%,var(--secondary))] px-3 text-sm text-danger active:brightness-[1.15]"
               onClick={() => onDeleteDealer(dealer)}
             >
               <Trash2Icon className="size-[18px]" />
               Delete
             </button>
-            <button type="button" className="ledger-detail-btn ledger-detail-btn--done" onClick={onClose}>
-              <span className="grid size-[18px] place-items-center rounded-full border border-current text-[11px]">✓</span>
+            <button
+              type="button"
+              className="flex h-[38px] items-center gap-2.5 rounded-[9px] border-2 border-[color-mix(in_srgb,var(--primary)_45%,#303030)] bg-[color-mix(in_srgb,var(--primary)_18%,var(--secondary))] px-3 text-sm text-primary-hover active:brightness-[1.15]"
+              onClick={onClose}
+            >
+              <span className="grid size-[18px] place-items-center rounded-full border border-current text-[11px]">
+                ✓
+              </span>
               Done
             </button>
           </div>
@@ -412,12 +466,17 @@ function DetailRow({
   value: string;
 }) {
   return (
-    <div className="ledger-detail-row">
-      <div className="ledger-detail-key">
-        <span className="grid size-[15px] place-items-center text-[#d0d0d0] [&_svg]:size-[15px]">{icon}</span>
+    <div className="flex min-h-[34px] overflow-hidden rounded-[9px] border-2 border-[#262626] bg-card">
+      <div className="flex w-[104px] flex-none items-center gap-2.5 bg-[#262626] px-2.5 text-xs text-[#d0d0d0]">
+        <span className="grid size-[15px] place-items-center text-[#d0d0d0] [&_svg]:size-[15px]">
+          {icon}
+        </span>
         <span>{label}</span>
       </div>
-      <div className="ledger-detail-val" title={value}>
+      <div
+        className="flex min-w-0 flex-1 items-center justify-center gap-1.5 bg-card px-2 py-1.5 text-center text-xs break-words"
+        title={value}
+      >
         {value}
       </div>
     </div>
@@ -473,14 +532,14 @@ export function LedgerNotesPanel({
         !desktopActive && "lg:hidden",
       )}
     >
-      <div className="ledger-header">
+      <div className={headerClass}>
         <Button variant="ghost" size="icon" aria-label="Back to dealers" onClick={onBack}>
           <ArrowLeftIcon />
         </Button>
         {dealer && <LedgerAvatar dealer={dealer} />}
         <div className="min-w-0 flex-1">
-          <div className="ledger-header-title truncate">{dealer?.name ?? "Dealer"}</div>
-          <div className="ledger-header-sub">
+          <div className={cn(headerTitleClass, "truncate")}>{dealer?.name ?? "Dealer"}</div>
+          <div className={headerSubClass}>
             Total :{" "}
             <span className={total >= 0 ? "text-success" : "text-danger"}>
               {formatSigned(total, currency)}
@@ -516,8 +575,10 @@ export function LedgerNotesPanel({
               const tone = noteTotal >= 0 ? "var(--bar-green)" : "var(--bar-red)";
               return (
                 <div
-                  className="ledger-code-card"
-                  data-selected={selectedId === note.id}
+                  className={cn(
+                    "relative mx-2.5 mt-1.5 cursor-pointer overflow-hidden rounded-xl bg-[linear-gradient(#2e2e2e,#262626)] shadow-[0_2px_6px_rgba(0,0,0,0.45)] hover:bg-[linear-gradient(#343434,#2a2a2a)]",
+                    selectedId === note.id && "outline-2 outline-primary-hover",
+                  )}
                   style={{ "--tone": tone } as CSSProperties}
                 >
                   <ContextMenu>
@@ -525,7 +586,7 @@ export function LedgerNotesPanel({
                       render={
                         <Button
                           variant="ghost"
-                          className="h-auto w-full justify-start rounded-none p-3 text-left"
+                          className="h-auto w-full justify-start rounded-none p-3 text-left hover:bg-transparent"
                           aria-label={`Open ${note.code}`}
                           onClick={() => onSelect(note.id)}
                         />
@@ -533,16 +594,18 @@ export function LedgerNotesPanel({
                     >
                       <span className="min-w-0 flex-1">
                         <span className="flex items-baseline justify-between gap-2">
-                          <span className="ledger-code">{note.code}</span>
+                          <span className="text-lg font-normal tracking-[0.2px] text-amount-blue">
+                            {note.code}
+                          </span>
                           {summary?.last && (
-                            <span className="ledger-row-meta shrink-0">
+                            <span className={cn(rowMetaClass, "shrink-0")}>
                               {formatListDate(summary.last.created_at)}
                             </span>
                           )}
                         </span>
                         <span className="mt-1 flex items-center justify-between gap-2">
                           <span
-                            className="ledger-row-meta truncate"
+                            className={cn(rowMetaClass, "truncate")}
                             title={`${note.label || "Ledger note"} · ${summary?.count ?? 0} tx`}
                           >
                             {note.label || "Ledger note"}
@@ -551,7 +614,7 @@ export function LedgerNotesPanel({
                           {summary && summary.count > 0 && (
                             <span
                               className={cn(
-                                "ledger-row-total shrink-0 tabular-nums",
+                                "shrink-0 text-sm font-medium tabular-nums",
                                 noteTotal >= 0 ? "text-success" : "text-danger",
                               )}
                             >
@@ -574,7 +637,7 @@ export function LedgerNotesPanel({
                       </ContextMenuList>
                     </ContextMenuContent>
                   </ContextMenu>
-                  <div className="ledger-code-card-bar" />
+                  <div className="h-[3px] bg-[linear-gradient(90deg,var(--tone,var(--bar-blue)),transparent_92%)]" />
                 </div>
               );
             }}
@@ -583,7 +646,7 @@ export function LedgerNotesPanel({
       )}
 
       {dealer && (
-        <Button className="ledger-fab" aria-label="New ledger note" onClick={onNewNote}>
+        <Button className={fabClass} aria-label="New ledger note" onClick={onNewNote}>
           <span className="text-2xl leading-none">+</span>
         </Button>
       )}
@@ -702,13 +765,13 @@ export function LedgerThread({
     <section
       className={cn("flex min-h-0 min-w-0 flex-1 flex-col bg-background", !active && "max-lg:hidden")}
     >
-      <div className="ledger-header">
+      <div className={headerClass}>
         <Button variant="ghost" size="icon" aria-label="Back to ledger notes" onClick={onBack}>
           <ArrowLeftIcon />
         </Button>
         {dealer && <LedgerAvatar dealer={dealer} />}
         <div className="min-w-0 flex-1">
-          <div className="ledger-header-title truncate">
+          <div className={cn(headerTitleClass, "truncate")}>
             {dealer?.name ?? "Dealer"}
             {note && (
               <Badge variant="secondary" className="ml-2 align-middle font-normal">
@@ -716,7 +779,7 @@ export function LedgerThread({
               </Badge>
             )}
           </div>
-          <div className="ledger-header-sub">
+          <div className={headerSubClass}>
             Total :{" "}
             <span className={totals.balance >= 0 ? "text-success" : "text-danger"}>
               {formatSigned(totals.balance, currency)}
@@ -747,8 +810,8 @@ export function LedgerThread({
 
       {!loading && entries.length === 0 ? (
         <div className="flex min-h-0 flex-1 flex-col">
-          <div className="ledger-empty">
-            <ReceiptTextIcon strokeWidth={1} />
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center text-[#4b4b4b]">
+            <ReceiptTextIcon strokeWidth={1} className="size-[90px]" />
             <span className="text-lg">No transactions yet</span>
           </div>
         </div>
@@ -763,8 +826,11 @@ export function LedgerThread({
             renderRow={(row) => {
               if (row.kind === "divider") {
                 return (
-                  <div className="ledger-divider">
-                    <span>{row.label}</span>
+                  <div className="relative my-4 mb-2 flex h-3 items-center justify-center">
+                    <span className="absolute inset-x-0 top-1/2 h-px bg-[#0b6a99]" />
+                    <span className="relative rounded-[3px] bg-primary px-[14px] py-[2px] text-[8px] text-white">
+                      {row.label}
+                    </span>
                   </div>
                 );
               }
@@ -780,22 +846,26 @@ export function LedgerThread({
                   )}
                 >
                   <div
-                    className="ledger-bubble"
-                    data-kind={entry.kind}
+                    className={cn(
+                      "relative max-w-[78%] rounded-xl bg-[linear-gradient(#2e2e2e,#262626)] px-3 py-2 shadow-[0_2px_6px_rgba(0,0,0,0.45)]",
+                      isIncome ? "rounded-bl-[4px]" : "rounded-br-[4px]",
+                    )}
                     style={{ "--tone": entryTone } as CSSProperties}
                   >
                     <div className="flex items-baseline justify-between gap-6">
-                      <span
-                        className="ledger-bubble-amount tabular-nums"
-                        style={{ color: entryColor }}
-                      >
+                      <span className="text-lg tabular-nums" style={{ color: entryColor }}>
                         {isIncome ? "+" : "−"}
                         {formatAmount(entry.amount_cents, currency)}
                       </span>
-                      <span className="ledger-bubble-time">{formatTime(entry.created_at)}</span>
+                      <span className="text-[8px] text-muted-foreground">
+                        {formatTime(entry.created_at)}
+                      </span>
                     </div>
-                    <div className="ledger-bubble-bar" />
-                    <div className="ledger-bubble-note break-words" title={entry.description}>
+                    <div className="mx-[-12px] my-1.5 h-[3px] bg-[linear-gradient(90deg,var(--tone),transparent_92%)]" />
+                    <div
+                      className="overflow-hidden text-[10px] text-ellipsis whitespace-nowrap text-[#bdbdbd]"
+                      title={entry.description}
+                    >
                       {entry.description}
                     </div>
                   </div>
@@ -818,8 +888,11 @@ export function LedgerThread({
 
       {note && (
         <form onSubmit={submit} className="shrink-0">
-          <div className="ledger-composer" style={{ "--tone": tone, "--bar": bar } as CSSProperties}>
-            <div className="ledger-composer-kind">
+          <div
+            className="mx-3 mb-3 flex-none overflow-hidden rounded-xl bg-card shadow-[0_2px_6px_rgba(0,0,0,0.45)]"
+            style={{ "--tone": tone, "--bar": bar } as CSSProperties}
+          >
+            <div className="flex gap-2 px-2.5 pt-2">
               <ToggleGroup
                 value={[kind]}
                 onValueChange={(values) => {
@@ -834,7 +907,7 @@ export function LedgerThread({
                 <ToggleGroupItem value="expense">Expense</ToggleGroupItem>
               </ToggleGroup>
             </div>
-            <div className="ledger-composer-row1">
+            <div className="flex items-center gap-2 px-2.5 pt-1.5 pb-1">
               <Button
                 type="button"
                 variant="ghost"
@@ -850,7 +923,7 @@ export function LedgerThread({
                 <XIcon />
               </Button>
               <Input
-                className="ledger-composer-amount"
+                className="h-auto min-w-0 flex-1 rounded-none border-0 bg-transparent p-0 text-right text-lg text-[var(--tone)] shadow-none ring-0 placeholder:text-[#6f8f7d] focus-visible:border-0 focus-visible:ring-0 dark:bg-transparent"
                 type="number"
                 min="0.001"
                 step="0.001"
@@ -861,10 +934,13 @@ export function LedgerThread({
                 onChange={(event) => setAmount(event.target.value)}
               />
             </div>
-            <div className="ledger-composer-bar" style={{ background: `linear-gradient(90deg, transparent, ${bar})` }} />
-            <div className="ledger-composer-row2">
+            <div
+              className="h-[3px]"
+              style={{ background: `linear-gradient(90deg, transparent, ${bar})` }}
+            />
+            <div className="flex items-center gap-2 px-2.5 pt-1.5 pb-2">
               <Input
-                className="ledger-composer-note"
+                className="h-auto min-w-0 flex-1 rounded-none border-0 bg-transparent p-0 text-sm shadow-none ring-0 placeholder:text-muted-foreground focus-visible:border-0 focus-visible:ring-0 dark:bg-transparent"
                 type="text"
                 maxLength={120}
                 aria-label="Note"
