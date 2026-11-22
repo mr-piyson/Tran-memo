@@ -41,7 +41,12 @@ export default function AppSidebar({
   };
 
   return (
-    <Sidebar collapsible="icon">
+    // The sidebar is position:fixed, so it escapes the app shell's safe-area
+    // padding. Re-apply it here (left/top/bottom are the relevant edges).
+    <Sidebar
+      collapsible="icon"
+      className="pt-[var(--safe-area-inset-top)] pb-[var(--safe-area-inset-bottom)] pl-[var(--safe-area-inset-left)]"
+    >
       <SidebarHeader>
         <div className="flex items-center gap-2 px-1">
           <Logo

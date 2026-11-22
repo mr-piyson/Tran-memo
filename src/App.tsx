@@ -197,7 +197,15 @@ export default function App() {
   return (
     <TooltipProvider>
       <SidebarProvider defaultOpen={false}>
-        <div className="flex h-dvh w-full overflow-hidden bg-background text-foreground">
+        {/* h-dvh keeps desktop full-screen; the padding carves out Android safe
+            areas inside that box (border-box sizing), so nothing collapses. */}
+        <div
+          className="flex h-dvh w-full overflow-hidden bg-background text-foreground"
+          style={{
+            padding:
+              "var(--safe-area-inset-top) var(--safe-area-inset-right) var(--safe-area-inset-bottom) var(--safe-area-inset-left)",
+          }}
+        >
           <AppSidebar
             onDealers={() => void navigate({ to: "/" })}
             onNewDealer={() => openDialog("newDealer")}

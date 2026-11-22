@@ -76,6 +76,16 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Tauri Android runs edge-to-edge (enableEdgeToEdge in MainActivity). With
+   viewport-fit=cover the WebView draws behind system bars and cutouts, so CSS
+   needs these insets to keep the UI clear of them. Fallback to 0px on desktop. */
+:root {
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+}
+
 /* Dark-only palette from LEDGER_DESIGN.md §3. */
 :root,
 .dark {
