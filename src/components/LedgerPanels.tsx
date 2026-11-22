@@ -9,6 +9,7 @@ import {
 import {
   ArchiveXIcon,
   ArrowLeftIcon,
+  EllipsisVerticalIcon,
   InfoIcon,
   PencilIcon,
   ReceiptTextIcon,
@@ -29,6 +30,13 @@ import {
   ContextMenuList,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuList,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -209,7 +217,7 @@ export function DealersPanel({
     >
       <div className={headerClass}>
         <SidebarTrigger className="-ml-1" />
-        <Logo width="26" height="30" primaryColor="var(--muted-foreground)" aria-hidden="true" />
+        <Logo width="26" height="30" primaryColor="var(--primary)" title="" />
         <div className="min-w-0 flex-1">
           <div className={headerTitleClass}>Ledger</div>
           <div className={headerSubClass}>Dealers</div>
@@ -493,6 +501,8 @@ export function LedgerNotesPanel({
   onNewNote,
   onEditNote,
   onDeleteNote,
+  onDetailDealer,
+  onEditDealer,
   onDeleteDealer,
 }: {
   dealer: Dealer | null;
@@ -508,6 +518,8 @@ export function LedgerNotesPanel({
   onNewNote: () => void;
   onEditNote: (note: LedgerNote) => void;
   onDeleteNote: (note: LedgerNote) => void;
+  onDetailDealer: (dealer: Dealer) => void;
+  onEditDealer: (dealer: Dealer) => void;
   onDeleteDealer: () => void;
 }) {
   const summaries = useMemo(
@@ -538,15 +550,36 @@ export function LedgerNotesPanel({
           </div>
         </div>
         {dealer && (
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Delete dealer"
-            title="Delete dealer"
-            onClick={onDeleteDealer}
-          >
-            <Trash2Icon className="text-danger" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Dealer actions"
+                  title="Dealer actions"
+                />
+              }
+            >
+              <EllipsisVerticalIcon />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuList>
+                <DropdownMenuItem onClick={() => onDetailDealer(dealer)}>
+                  <InfoIcon />
+                  Detail
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onEditDealer(dealer)}>
+                  <PencilIcon />
+                  Edit dealer
+                </DropdownMenuItem>
+                <DropdownMenuItem variant="destructive" onClick={onDeleteDealer}>
+                  <Trash2Icon />
+                  Delete dealer
+                </DropdownMenuItem>
+              </DropdownMenuList>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
 

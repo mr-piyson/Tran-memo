@@ -1,3 +1,4 @@
+import Logo from "@/assets/Logo";
 import {
   MessageCircleIcon,
   PlusIcon,
@@ -43,9 +44,13 @@ export default function AppSidebar({
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <div className="flex items-center gap-2 px-1">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sm font-bold text-sidebar-primary-foreground">
-            L
-          </div>
+          <Logo
+            width="26"
+            height="30"
+            primaryColor="var(--primary)"
+            title=""
+            className="shrink-0"
+          />
           <div className="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
             <span className="truncate text-sm font-semibold">Ledger Notes</span>
             <span className="truncate text-xs text-sidebar-foreground/70">

@@ -213,7 +213,9 @@ export default function App() {
                 selectedId={dealerId}
                 currency={currency}
                 active={mobilePane === "dealers"}
-                desktopActive={!isDetail && dealerId === null}
+                // Detail is a separate pane: keep the list on desktop while it
+                // is open, but let the two swap on mobile (only the active one).
+                desktopActive={dealerId === null || isDetail}
                 onSelect={(id) =>
                   void navigate({ to: "/dealers/$dealerId", params: { dealerId: String(id) } })
                 }
@@ -246,6 +248,13 @@ export default function App() {
                 onNewNote={() => openDialog("newNote", dealerId)}
                 onEditNote={(note) => openDialog("editNote", note.id)}
                 onDeleteNote={requestDeleteNote}
+                onDetailDealer={(dealer) =>
+                  void navigate({
+                    to: "/dealers/$dealerId/detail",
+                    params: { dealerId: String(dealer.id) },
+                  })
+                }
+                onEditDealer={(dealer) => openDialog("editDealer", dealer.id)}
                 onDeleteDealer={() => requestDeleteDealer()}
               />
               <LedgerThread
