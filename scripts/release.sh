@@ -118,8 +118,8 @@ PY
   /usr/bin/ranlib "$clean"
 
   "$clang" -arch arm64 -isysroot "$sdk" -miphoneos-version-min=15.0 \
-    -fobjc-arc -std=c++14 -I "$gen/Sources/note-app" \
-    -c "$gen/Sources/note-app/main.mm" -o "$out/main.o"
+    -fobjc-arc -std=c++14 -I "$gen/Sources/tran-note" \
+    -c "$gen/Sources/tran-note/main.mm" -o "$out/main.o"
   "$clang" -arch arm64 -isysroot "$sdk" -miphoneos-version-min=15.0 -L "$swiftlib" \
     -o "$out/LedgerNotes" "$out/main.o" "$clean" \
     -framework CoreGraphics -framework Metal -framework MetalKit \
@@ -132,7 +132,7 @@ PY
   mkdir -p "$app"
   cp "$out/LedgerNotes" "$app/Ledger Notes"
   cp "$gen"/Assets.xcassets/AppIcon.appiconset/*.png "$app/" 2>/dev/null || true
-  python3 - "$gen/note-app_iOS/Info.plist" "$app/Info.plist" <<'PY'
+  python3 - "$gen/tran-note_iOS/Info.plist" "$app/Info.plist" <<'PY'
 import plistlib, sys
 src, dst = sys.argv[1], sys.argv[2]
 s = open(src).read()
