@@ -68,6 +68,20 @@ Each script builds the target, copies the installer into `.releases/`, and signs
 the Android APK when a debug keystore is available. The scripts live in
 `scripts/release.sh`.
 
+### Renaming the app
+
+`app.config.json` is the single source of truth for the package name, display
+name, bundle identifier, and version. Change it there, then run `pnpm rename`
+(or `bun rename`). Flags override the file and are written back to it:
+
+```bash
+bun rename --display-name "New Name" --version 1.2.0
+bun rename --identifier com.example.newname --native
+```
+
+`--native` also regenerates the ignored `src-tauri/gen/` projects. Release
+artifact names come from the same config, so no script edits are needed.
+
 ## Build
 
 ```bash

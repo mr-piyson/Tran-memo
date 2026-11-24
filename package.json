@@ -17,6 +17,7 @@
     "test:watch": "vitest",
     "sg:check": "ast-grep scan",
     "find:cn": "ast-grep -p 'cn($$$ARGS)' src",
+    "rename": "node scripts/rename-app.mjs",
     "tauri": "tauri",
     "release:macos": "bash scripts/release.sh macos",
     "release:windows": "bash scripts/release.sh windows",

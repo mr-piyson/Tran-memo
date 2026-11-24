@@ -7,6 +7,17 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 mkdir -p .releases
 
+read_config() {
+  node -e 'const c = JSON.parse(require("node:fs").readFileSync("app.config.json", "utf8")); process.stdout.write(String(c[process.argv[1]]))' "$1"
+}
+
+APP_NAME="$(read_config name)"
+APP_DISPLAY_NAME="$(read_config displayName)"
+APP_IDENTIFIER="$(read_config identifier)"
+APP_VERSION="$(read_config version)"
+APP_RELEASE_SLUG="$(read_config displayName | sed -E 's/[^A-Za-z0-9]+/-/g; s/^-+//; s/-+$//')"
+LIB_NAME="${APP_NAME//-/_}"
+
 macos() {
   pnpm tauri build
   cp src-tauri/target/release/bundle/dmg/*.dmg .releases/
@@ -55,9 +66,9 @@ android() {
   fi
   signer="$(ls -1 "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)"
   "$signer" sign --ks "$keystore" --ks-pass pass:android --key-pass pass:android \
-    --out .releases/Ledger-Notes_0.1.0_arm64.apk "$unsigned"
+    --out ".releases/${APP_RELEASE_SLUG}_${APP_VERSION}_arm64.apk" "$unsigned"
   # apksigner writes a verification sidecar that is not needed for distribution.
-  rm -f .releases/Ledger-Notes_0.1.0_arm64.apk.idsig
+  rm -f ".releases/${APP_RELEASE_SLUG}_${APP_VERSION}_arm64.apk.idsig"
 }
 
 ios() {
@@ -79,13 +90,14 @@ ios() {
 
   (cd src-tauri && PATH="$shim:$PATH" cargo build --target aarch64-apple-ios --release)
 
-  local gen sdk swiftlib clang lib clean
+  local gen sdk swiftlib clang lib clean binary app
   gen="src-tauri/gen/apple"
   sdk="$("$shim/xcrun" --sdk iphoneos --show-sdk-path)"
   swiftlib="$XCODE_DEVELOPER_DIR/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphoneos"
   clang="$XCODE_DEVELOPER_DIR/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang++"
-  lib="src-tauri/target/aarch64-apple-ios/release/libnote_app_lib.a"
-  clean="$out/libnote_app_clean.a"
+  lib="src-tauri/target/aarch64-apple-ios/release/lib${LIB_NAME}_lib.a"
+  clean="$out/lib${LIB_NAME}_clean.a"
+  binary="$out/$APP_DISPLAY_NAME"
 
   # swift-rs leaves duplicate object members in the archive; keep one of each.
   python3 - "$lib" "$clean" <<'PY'
@@ -114,43 +126,43 @@ os.makedirs(tmp, exist_ok=True)
 for i, body in enumerate(kept):
     open(os.path.join(tmp, 'm%04d.o' % i), 'wb').write(body)
 PY
-  /usr/bin/ar -q "$clean" "$out"/libnote_app_clean.a.members/m*.o
+  /usr/bin/ar -q "$clean" "$clean".members/m*.o
   /usr/bin/ranlib "$clean"
 
   "$clang" -arch arm64 -isysroot "$sdk" -miphoneos-version-min=15.0 \
-    -fobjc-arc -std=c++14 -I "$gen/Sources/note-app" \
-    -c "$gen/Sources/note-app/main.mm" -o "$out/main.o"
+    -fobjc-arc -std=c++14 -I "$gen/Sources/$APP_NAME" \
+    -c "$gen/Sources/$APP_NAME/main.mm" -o "$out/main.o"
   "$clang" -arch arm64 -isysroot "$sdk" -miphoneos-version-min=15.0 -L "$swiftlib" \
-    -o "$out/LedgerNotes" "$out/main.o" "$clean" \
+    -o "$binary" "$out/main.o" "$clean" \
     -framework CoreGraphics -framework Metal -framework MetalKit \
     -framework QuartzCore -framework Security -framework UIKit -framework WebKit \
     -lswiftCompatibility51 -lswiftCompatibility56 -lswiftCompatibilityConcurrency \
     -lswiftCompatibilityPacks -lswiftCompatibilityDynamicReplacements -ObjC
 
-  local app
-  app="$out/Payload/Ledger Notes.app"
+  app="$out/Payload/$APP_DISPLAY_NAME.app"
   mkdir -p "$app"
-  cp "$out/LedgerNotes" "$app/Ledger Notes"
+  cp "$binary" "$app/$APP_DISPLAY_NAME"
   cp "$gen"/Assets.xcassets/AppIcon.appiconset/*.png "$app/" 2>/dev/null || true
-  python3 - "$gen/note-app_iOS/Info.plist" "$app/Info.plist" <<'PY'
+  python3 - "$gen/${APP_NAME}_iOS/Info.plist" "$app/Info.plist" \
+    "$APP_DISPLAY_NAME" "$APP_IDENTIFIER" <<'PY'
 import plistlib, sys
-src, dst = sys.argv[1], sys.argv[2]
+src, dst, display_name, identifier = sys.argv[1:5]
 s = open(src).read()
 for key, value in {
-    '$(EXECUTABLE_NAME)': 'Ledger Notes',
-    '$(PRODUCT_BUNDLE_IDENTIFIER)': 'com.example.ledgernotes',
-    '$(PRODUCT_NAME)': 'Ledger Notes',
+    '$(EXECUTABLE_NAME)': display_name,
+    '$(PRODUCT_BUNDLE_IDENTIFIER)': identifier,
+    '$(PRODUCT_NAME)': display_name,
     '$(DEVELOPMENT_LANGUAGE)': 'en',
 }.items():
     s = s.replace(key, value)
 info = plistlib.loads(s.encode())
 info.pop('UILaunchStoryboardName', None)  # cannot compile storyboard without iOS runtime
-info['CFBundleExecutable'] = 'Ledger Notes'
+info['CFBundleExecutable'] = display_name
 with open(dst, 'wb') as f:
     plistlib.dump(info, f)
 PY
-  (cd "$out" && zip -qry Ledger-Notes_0.1.0_unsigned.ipa Payload)
-  cp "$out/Ledger-Notes_0.1.0_unsigned.ipa" .releases/
+  (cd "$out" && zip -qry "${APP_RELEASE_SLUG}_${APP_VERSION}_unsigned.ipa" Payload)
+  cp "$out/${APP_RELEASE_SLUG}_${APP_VERSION}_unsigned.ipa" .releases/
 }
 
 case "${1:-}" in
