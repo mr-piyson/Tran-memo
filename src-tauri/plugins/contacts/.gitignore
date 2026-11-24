@@ -1,0 +1,14 @@
+# Generated/copied on every mobile build by tauri-plugin's build script.
+/.tauri/
+/android/.tauri/
+
+# Gradle / Android Studio outputs.
+/android/build/
+/android/.gradle/
+/android/local.properties
+
+# SwiftPM outputs.
+/ios/.build/
+/ios/Packages/
+/ios/.swiftpm/
+/ios/Package.resolved

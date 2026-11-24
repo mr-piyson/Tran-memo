@@ -1,5 +1,5 @@
 [package]
-name = "tran-note"
+name = "note-app"
 version = "0.1.0"
 description = "A Tauri App"
 authors = ["you"]

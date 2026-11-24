@@ -1,16 +1,16 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::{
     Runtime,
     plugin::{Builder, TauriPlugin},
 };
 #[cfg(mobile)]
-use tauri::plugin::PluginHandle;
+use tauri::{Manager, plugin::PluginHandle};
 
 #[cfg(target_os = "ios")]
 tauri::ios_plugin_binding!(init_plugin_contacts);
 
 /// A contact read from the device address book.
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NativeContact {
     pub name: String,
