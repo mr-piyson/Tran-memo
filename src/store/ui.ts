@@ -35,6 +35,11 @@ interface UIState {
   openDialog: (dialog: Exclude<DialogName, null>, targetId?: number | null) => void;
   closeDialog: () => void;
 
+  /** Nested contact picker shown on top of the dealer dialog. */
+  contactPickerOpen: boolean;
+  openContactPicker: () => void;
+  closeContactPicker: () => void;
+
   error: string | null;
   setError: (message: string | null) => void;
 
@@ -59,7 +64,12 @@ export const useUIStore = create<UIState>()(
       dialog: null,
       dialogTargetId: null,
       openDialog: (dialog, targetId = null) => set({ dialog, dialogTargetId: targetId }),
-      closeDialog: () => set({ dialog: null, dialogTargetId: null }),
+      closeDialog: () =>
+        set({ dialog: null, dialogTargetId: null, contactPickerOpen: false }),
+
+      contactPickerOpen: false,
+      openContactPicker: () => set({ contactPickerOpen: true }),
+      closeContactPicker: () => set({ contactPickerOpen: false }),
 
       error: null,
       setError: (error) => set({ error }),

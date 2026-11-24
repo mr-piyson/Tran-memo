@@ -42,6 +42,7 @@ function useAndroidBack(pathname: string) {
       .then(({ onBackButtonPress, exit }) =>
         onBackButtonPress(() => {
           const state = useUIStore.getState();
+          if (state.contactPickerOpen) return state.closeContactPicker();
           if (state.dialog) return state.closeDialog();
           if (state.confirm) return state.closeConfirm();
           if (pathname !== "/") return router.history.back();

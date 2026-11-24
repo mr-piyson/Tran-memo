@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-load-native-contacts"
+description = "Enables the load_native_contacts command without any pre-configured scope."
+commands.allow = ["load_native_contacts"]
+
+[[permission]]
+identifier = "deny-load-native-contacts"
+description = "Denies the load_native_contacts command without any pre-configured scope."
+commands.deny = ["load_native_contacts"]

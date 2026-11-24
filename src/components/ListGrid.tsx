@@ -66,6 +66,20 @@ export default function ListGrid<T>({
     total: number;
   } | null>(null);
 
+  // Overlay dialogs paint after their popup mounts, so the scroll element is
+  // null on the first render. Nudge the virtualizer once it is ready (and
+  // re-arm when the list unmounts) so rows are measured and rendered.
+  const didInitialScroll = useRef(false);
+  useEffect(() => {
+    if (!scrollReady) {
+      didInitialScroll.current = false;
+      return;
+    }
+    if (rows.length === 0 || didInitialScroll.current) return;
+    didInitialScroll.current = true;
+    virtualizer.scrollToIndex(0);
+  }, [scrollReady, rows.length, virtualizer]);
+
   useEffect(() => {
     const total = virtualizer.getTotalSize();
     if (!scrollReady || rows.length === 0) {

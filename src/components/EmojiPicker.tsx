@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { DealerAvatar, isDefaultAvatar } from "@/components/LedgerPanels";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,9 +25,11 @@ function loadPicker() {
 interface EmojiPickerProps {
   value: string;
   onChange: (emoji: string) => void;
+  /** Replace the default full-width trigger (e.g. an avatar in a summary card). */
+  trigger?: (open: () => void) => ReactNode;
 }
 
-export default function EmojiPicker({ value, onChange }: EmojiPickerProps) {
+export default function EmojiPicker({ value, onChange, trigger }: EmojiPickerProps) {
   const [open, setOpen] = useState(false);
   // Base UI portals its popup after the open state commits, so a plain ref is
   // still null when the picker effect runs. Track the node via a callback ref
@@ -73,22 +75,26 @@ export default function EmojiPicker({ value, onChange }: EmojiPickerProps) {
 
   return (
     <>
-      <Button
-        type="button"
-        variant="outline"
-        className="h-auto w-full justify-start gap-3 p-2.5"
-        onClick={() => setOpen(true)}
-      >
-        <DealerAvatar emoji={value} size="md" />
-        <span className="flex min-w-0 flex-col items-start">
-          <span className="text-sm font-medium">
-            {isDefault ? "Default avatar" : "Emoji avatar"}
+      {trigger ? (
+        trigger(() => setOpen(true))
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          className="h-auto w-full justify-start gap-3 p-2.5"
+          onClick={() => setOpen(true)}
+        >
+          <DealerAvatar emoji={value} size="md" />
+          <span className="flex min-w-0 flex-col items-start">
+            <span className="text-sm font-medium">
+              {isDefault ? "Default avatar" : "Emoji avatar"}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {isDefault ? "Choose an emoji or keep the default" : `${value} · Change`}
+            </span>
           </span>
-          <span className="text-xs text-muted-foreground">
-            {isDefault ? "Choose an emoji or keep the default" : `${value} · Change`}
-          </span>
-        </span>
-      </Button>
+        </Button>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-md flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
