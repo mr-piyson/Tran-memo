@@ -1,5 +1,5 @@
 {
-  "name": "note-app",
+  "name": "tran-app",
   "version": "0.1.0",
   "private": true,
   "description": "A cross-platform money tracker note app built with Tauri 2, React, Tailwind CSS and shadcn/ui (Base UI)",

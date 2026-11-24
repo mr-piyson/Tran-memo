@@ -79,8 +79,9 @@ bun rename --display-name "New Name" --version 1.2.0
 bun rename --identifier com.example.newname --native
 ```
 
-`--native` also regenerates the ignored `src-tauri/gen/` projects. Release
-artifact names come from the same config, so no script edits are needed.
+Changing the package name regenerates the ignored `src-tauri/gen/` projects
+automatically; `--native` forces regeneration. Release artifact names come from
+the same config, so no script edits are needed.
 
 ## Build
 

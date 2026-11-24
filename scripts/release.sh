@@ -16,7 +16,8 @@ APP_DISPLAY_NAME="$(read_config displayName)"
 APP_IDENTIFIER="$(read_config identifier)"
 APP_VERSION="$(read_config version)"
 APP_RELEASE_SLUG="$(read_config displayName | sed -E 's/[^A-Za-z0-9]+/-/g; s/^-+//; s/-+$//')"
-LIB_NAME="${APP_NAME//-/_}"
+LIB_NAME="$(sed -n 's/^name = "\(.*\)_lib"$/\1/p' src-tauri/Cargo.toml | head -1)"
+LIB_NAME="${LIB_NAME:-${APP_NAME//-/_}}"
 
 macos() {
   pnpm tauri build
